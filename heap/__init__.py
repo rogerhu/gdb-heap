@@ -299,6 +299,7 @@ def categorize_usage_list(usage_list):
             ptr_type = caching_lookup_type('pysqlite_Statement').pointer()
             obj_ptr = gdb.Value(u.start).cast(ptr_type)
             #print obj_ptr.dereference()
+            from heap.sqlite import categorize_sqlite3
             for fieldname, category, fn in (('db', 'sqlite3', 
                                              categorize_sqlite3), ('st', 'sqlite3_stmt', None)):
                 field_ptr = long(obj_ptr[fieldname])
