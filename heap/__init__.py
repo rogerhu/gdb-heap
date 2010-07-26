@@ -8,6 +8,8 @@ type_void_ptr = gdb.lookup_type('void').pointer()
 type_char_ptr = gdb.lookup_type('char').pointer()
 type_unsigned_char_ptr = gdb.lookup_type('unsigned char').pointer()
 
+sizeof_ptr = type_void_ptr.sizeof
+
 __type_cache = {}
 
 def caching_lookup_type(typename):
@@ -83,9 +85,13 @@ class WrappedPointer(WrappedValue):
                    )
                 )
 
-def fmt_addr(addr):
-    # FIXME: this assumes 64-bit
-    return '0x%016x' % addr
+if sizeof_ptr == 4:
+    def fmt_addr(addr):
+        return '0x%08x' % addr
+else:
+    # Assume 64-bit:
+    def fmt_addr(addr):
+        return '0x%016x' % addr
 
 def fmt_size(size):
     '''
@@ -169,7 +175,7 @@ def hexdump_as_long(addr, count):
         long = ptr.dereference()
         longbuf.append(long)
         bptr = gdb.Value(ptr).cast(type_unsigned_char_ptr)
-        for i in range(8): # FIXME
+        for i in range(sizeof_ptr):
             bytebuf.append(int((bptr + i).dereference()))
     return (' '.join([fmt_addr(long) for long in longbuf])
             + ' |' 
