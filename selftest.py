@@ -131,7 +131,7 @@ class DebuggerTests(unittest.TestCase):
     def command_test(self, progargs, commands, breakpoint=None):
         # Run under gdb, hit the breakpoint, then run our "heap" command:
         commands =  [
-            'python sys.path.append(".") ; import heap'
+            'python sys.path.append(".") ; import gdbheap'
             ] + commands
         args = ["gdb", "--batch"]
         args += ['--eval-command=%s' % cmd for cmd in commands]

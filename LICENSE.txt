@@ -1,0 +1,2 @@
+gdb-heap is licensed under the LGPLv2.1, with the exception of heap/python.py,
+which is licensed under the PSF license.
