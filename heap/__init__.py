@@ -388,6 +388,11 @@ def categorize(addr, size):
             # object, and fall through:
             pass
 
+    from heap.cplusplus import get_class_name
+    cpp_cls = get_class_name(addr, size)
+    if cpp_cls:
+        return cpp_cls
+
     s = as_nul_terminated_string(addr, size)
     if s and len(s) > 2:
         return 'string data'
