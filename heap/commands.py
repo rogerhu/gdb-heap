@@ -5,7 +5,11 @@ import sys
 from heap.glibc import get_ms
 from heap.history import history, Snapshot, Diff
 
-from heap import iter_usage, fmt_size, fmt_addr, categorize, hexdump_as_bytes, Table
+from heap import iter_usage, \
+    fmt_size, fmt_addr, \
+    categorize, categorize_usage_list, \
+    hexdump_as_bytes, \
+    Table
 
 class HeapCmd(gdb.Command):
     '''
