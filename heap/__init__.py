@@ -258,42 +258,54 @@ class UsageSet(object):
             if debug:
                 print 'addr 0x%x not found (for category %r)' % (addr, category)
 
-def categorize_usage_list(usage_list):
-    '''Do a "full-graph" categorization of the given list of Usage instances
-    For example, if p is a (PyDictObject*), then mark p->ma_table and p->ma_mask
-    accordingly
+class PythonCategorizer(object):
     '''
-    usage_set = UsageSet(usage_list)
-    visited = set()
+    Logic for categorizing buffers owned by Python objects.
+    (Done as an object to capture the type-lookup state)
+    '''
+    def __init__(self):
+        '''This will raise a TypeError if the types aren't available (e.g. not
+        a python app, or debuginfo not available'''
+        self._type_PyDictObject_ptr = caching_lookup_type('PyDictObject').pointer()
+        self._type_PyListObject_ptr = caching_lookup_type('PyListObject').pointer()
+        self._type_PySetObject_ptr = caching_lookup_type('PySetObject').pointer()
+        self._type_PyUnicodeObject_ptr = caching_lookup_type('PyUnicodeObject').pointer()
+        self._type_PyGC_Head = caching_lookup_type('PyGC_Head')
 
-    # Precompute some types:
-    _type_PyDictObject_ptr = caching_lookup_type('PyDictObject').pointer()
-    _type_PyListObject_ptr = caching_lookup_type('PyListObject').pointer()
-    _type_PySetObject_ptr = caching_lookup_type('PySetObject').pointer()
-    _type_PyUnicodeObject_ptr = caching_lookup_type('PyUnicodeObject').pointer()
-    _type_PyGC_Head = caching_lookup_type('PyGC_Head')
+    @classmethod
+    def make(cls):
+        '''Try to make a PythonCategorizer, if debuginfo is available; otherwise return None'''
+        try:
+            return cls()
+        except RuntimeError:
+            return None
 
-    for u in usage_list:
-        u.ensure_category()
+    def categorize(self, u, usage_set):
+        '''Try to categorize a Usage instance within an UsageSet (which could
+        lead to further categorization)'''
         if u.category == 'python dict':
-            dict_ptr = gdb.Value(u.start + _type_PyGC_Head.sizeof).cast(_type_PyDictObject_ptr)
+            dict_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyDictObject_ptr)
             ma_table = long(dict_ptr['ma_table'])
             usage_set.set_addr_category(ma_table, 'PyDictEntry table')
+            return True
 
         elif u.category == 'python list':
-            list_ptr = gdb.Value(u.start + _type_PyGC_Head.sizeof).cast(_type_PyListObject_ptr)
+            list_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyListObject_ptr)
             ob_item = long(list_ptr['ob_item'])
             usage_set.set_addr_category(ob_item, 'PyListObject ob_item table')
+            return True
 
         elif u.category == 'python set':
-            set_ptr = gdb.Value(u.start + _type_PyGC_Head.sizeof).cast(_type_PySetObject_ptr)
+            set_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PySetObject_ptr)
             table = long(set_ptr['table'])
             usage_set.set_addr_category(table, 'PySetObject setentry table')
+            return True
 
         elif u.category == 'python unicode':
-            unicode_ptr = gdb.Value(u.start).cast(_type_PyUnicodeObject_ptr)
+            unicode_ptr = gdb.Value(u.start).cast(self._type_PyUnicodeObject_ptr)
             m_str = long(unicode_ptr['str'])
             usage_set.set_addr_category(m_str, 'PyUnicodeObject buffer')
+            return True
 
         elif u.category == 'python sqlite3.Statement':
             ptr_type = caching_lookup_type('pysqlite_Statement').pointer()
@@ -313,6 +325,7 @@ def categorize_usage_list(usage_list):
                 if usage_set.set_addr_category(malloc_ptr, category):
                     if fn:
                         fn(field_ptr, usage_set, set())
+            return True
 
         elif u.category == 'python rpm.hdr':
             ptr_type = caching_lookup_type('struct hdrObject_s').pointer()
@@ -334,6 +347,30 @@ def categorize_usage_list(usage_list):
                     pass
                     #blob = h['blob']
                     #usage_set.set_addr_category(long(blob), 'rpm Header blob')
+
+        # Not categorized:
+        return False
+
+
+def categorize_usage_list(usage_list):
+    '''Do a "full-graph" categorization of the given list of Usage instances
+    For example, if p is a (PyDictObject*), then mark p->ma_table and p->ma_mask
+    accordingly
+    '''
+    usage_set = UsageSet(usage_list)
+    visited = set()
+
+    # Precompute some types, if available:
+    pycategorizer = PythonCategorizer.make()
+
+    for u in usage_list:
+        # Cover the simple cases, where the category can be figured out directly:
+        u.ensure_category()
+
+        # Try to categorize buffers used by python objects:
+        if pycategorizer:
+            if pycategorizer.categorize(u, usage_set):
+                continue
 
 
 
