@@ -205,10 +205,12 @@ def is_pyobject_ptr(addr):
     try:
         ob_refcnt = pyop['ob_refcnt']
         if ob_refcnt >=0 and ob_refcnt < 0xffff:
-            type_refcnt = pyop['ob_type']['ob_refcnt']
-            if type_refcnt >=0 and type_refcnt < 0xffff:
-                # Then this looks like a Python object:
-                return WrappedPointer(pyop)
+            obtype = pyop['ob_type']
+            if obtype != 0:
+                type_refcnt = obtype['ob_refcnt']
+                if type_refcnt > 0 and type_refcnt < 0xffff:
+                    # Then this looks like a Python object:
+                    return WrappedPointer(pyop)
     except RuntimeError:
         pass # Not a python object (or corrupt)
     
