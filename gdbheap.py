@@ -1,6 +1,5 @@
-from heap.commands import HeapCmd, HexdumpCmd
+from heap.commands import register_commands
 
 # Register the commands with gdb:
-HeapCmd()
-HexdumpCmd()
+register_commands()
 

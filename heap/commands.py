@@ -11,25 +11,14 @@ from heap import iter_usage, \
     hexdump_as_bytes, \
     Table
 
-class HeapCmd(gdb.Command):
-    '''
-    '''
+class Heap(gdb.Command):
+    'Print a report on memory usage, by category'
     def __init__(self):
         gdb.Command.__init__ (self,
                               "heap",
-                              gdb.COMMAND_DATA)
-        self.subcmds = ['all', 'used', 'log', 'label', 'sizes', 'diff']
-        
-    def complete(self, text, word):
-        # print "complete: %r %r" % (text, word)
-        args = text.split()
-        # print 'args: %r' % args
-        if len(args) == 0:
-            return self.subcmds
-        if len(args) == 1:
-            return [subcmd for subcmd in self.subcmds if subcmd.startswith(args[0])]
-
-    def print_used_memory_by_category(self):
+                              gdb.COMMAND_DATA,
+                              prefix=True)
+    def invoke(self, args, from_tty):
         total_by_category = {}
         count_by_category = {}
         total_size = 0
@@ -68,7 +57,13 @@ class HeapCmd(gdb.Command):
         t.write(sys.stdout)
         print
 
-    def print_used_chunks_by_size(self):
+class HeapSizes(gdb.Command):
+    'Print a report on memory usage, by sizes'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap sizes",
+                              gdb.COMMAND_DATA)
+    def invoke(self, args, from_tty):
         ms = get_ms()
         chunks_by_size = {}
         num_chunks = 0
@@ -97,7 +92,14 @@ class HeapCmd(gdb.Command):
         print        
 
 
-    def print_used_chunks(self):
+class HeapUsed(gdb.Command):
+    'Print used heap chunks'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap used",
+                              gdb.COMMAND_DATA)
+
+    def invoke(self, args, from_tty):
         print 'Used chunks of memory on heap'
         print '-----------------------------'
         ms = get_ms()
@@ -115,7 +117,14 @@ class HeapCmd(gdb.Command):
                       size, category, hd))
         print
 
-    def print_all_chunks(self):
+class HeapAll(gdb.Command):
+    'Print all heap chunks'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap all",
+                              gdb.COMMAND_DATA)
+
+    def invoke(self, args, from_tty):
         print 'All chunks of memory on heap (both used and free)'
         print '-------------------------------------------------'
         ms = get_ms()
@@ -133,7 +142,14 @@ class HeapCmd(gdb.Command):
                       kind, size, chunk))
         print
 
-    def impl_log(self):
+class HeapLog(gdb.Command):
+    'Print a log of recorded heap states'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap log",
+                              gdb.COMMAND_DATA)
+
+    def invoke(self, args, from_tty):
         h = history
         if len(h.snapshots) == 0:
             print '(no history)'
@@ -149,11 +165,26 @@ class HeapCmd(gdb.Command):
                 print '    ', d.stats()
             print
 
-    def impl_label(self, args):
+class HeapLabel(gdb.Command):
+    'Record the current state of the heap for later comparison'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap label",
+                              gdb.COMMAND_DATA)
+
+    def invoke(self, args, from_tty):
         s = history.add(args)
         print s.summary()
 
-    def subcmd_diff(self):
+
+class HeapDiff(gdb.Command):
+    'Compare two states of the heap'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap diff",
+                              gdb.COMMAND_DATA)
+
+    def invoke(self, args, from_tty):
         h = history
         if len(h.snapshots) == 0:
             print '(no history)'
@@ -166,47 +197,8 @@ class HeapCmd(gdb.Command):
         print
         print '\n'.join(['  ' + line for line in d.as_changes().splitlines()])
 
-
-    def invoke(self, args, from_tty):
-        # print '"heap" invoked with %r' % args
-        #val_main_arena = gdb.parse_and_eval('main_arena')
-        #print(val_main_arena)
-        #print "sbrk_base: 0x%x" % sbrk_base()
-
-        #for inf in gdb.inferiors():
-        #    #print inf
-        #    #print 'PID:', inf.pid
-        #    #print ['0x%x-0x%x' % (start, end) for start, end in iter_mmap_heap_chunks(inf.pid)]
-
-
-        #ms = MallocState(val_main_arena)
-        #for i, chunk in enumerate(ms.iter_chunks()):
-        #    print '%i: 0x%x, %s' % (i, chunk.as_address(), chunk)
-        args = args.split()
-        if len(args) == 0:
-            self.print_used_memory_by_category()
-            return
-
-        subcmd = args[0]
-        if subcmd == 'all':
-            self.print_all_chunks()
-        elif subcmd == 'used':
-            self.print_used_chunks()
-        elif subcmd == 'log':
-            self.impl_log()
-        elif subcmd == 'label':
-            self.impl_label(args[1])
-        elif subcmd == 'sizes':
-            self.print_used_chunks_by_size()
-        elif subcmd == 'diff':
-            self.subcmd_diff()
-        else:
-            print 'Unrecognized heap subcommand "%s"' % subcmd
-
-
-class HexdumpCmd(gdb.Command):
-    '''
-    '''
+class Hexdump(gdb.Command):
+    'Print a hexdump, starting at the specific region of memory'
     def __init__(self):
         gdb.Command.__init__ (self,
                               "hexdump",
@@ -226,4 +218,16 @@ class HexdumpCmd(gdb.Command):
             print ('%s -> %s %s' % (fmt_addr(addr),  fmt_addr(addr + size -1), hd))
             addr += size
 
+
+def register_commands():
+    # Register the commands with gdb
+    Heap()
+    HeapSizes()
+    HeapUsed()
+    HeapAll()
+    HeapLog()
+    HeapLabel()
+    HeapDiff()
+
+    Hexdump()
 
