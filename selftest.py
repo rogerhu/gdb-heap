@@ -12,6 +12,11 @@ import random
 
 from test.test_support import run_unittest, findfile
 
+if sys.maxint == 0x7fffffff:
+    _32bit = True
+else:
+    _32bit = False
+
 try:
     gdb_version, _ = subprocess.Popen(["gdb", "--version"],
                                       stdout=subprocess.PIPE).communicate()
@@ -182,12 +187,23 @@ Chunk size  Num chunks  Allocated size
         source = src.as_c_source()
 
         out = self.program_test('test_small_allocations', source, commands=['run',  'heap sizes'])
-        self.assert_('''
+
+        if _32bit:
+            exp = '''
+Chunk size  Num chunks  Allocated size
+----------  ----------  --------------
+        16        1200          19,200
+        24         300           7,200
+    TOTALS        1500          26,400
+'''
+        else:
+            exp = '''
 Chunk size  Num chunks  Allocated size
 ----------  ----------  --------------
         32        1500          48,000
     TOTALS        1500          48,000
-''' in out)
+'''
+        self.assert_(exp in out, out)
 
 
     def test_large_allocations(self):
@@ -252,14 +268,25 @@ main (int argc, char **argv)
         #print out
 
         # Verify the result
-        self.assert_('''
+        if _32bit:
+            exp = '''
+Chunk size  Num chunks  Allocated size
+----------  ----------  --------------
+   258,048           1         258,048
+       264          99          26,136
+     1,008           2           2,016
+    TOTALS         102         286,200
+'''
+        else:
+            exp = '''
 Chunk size  Num chunks  Allocated size
 ----------  ----------  --------------
    258,048           1         258,048
        272          99          26,928
      1,008           2           2,016
     TOTALS         102         286,992
-''' in out)
+'''
+        self.assert_(exp in out, out)
 
 
     def random_size(self):
