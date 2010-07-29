@@ -340,16 +340,25 @@ Chunk size  Num chunks  Allocated size
         src = TestSource()
         src.decls += '''
 class Foo {
+public:
     virtual ~Foo() {}
     int f1;
     int f2;
 };
+class Bar : Foo {
+public:
+    virtual ~Bar() {}
+    int f1;
+    int f2;
+};
 '''
-        src.operations += 'Foo *f = new Foo();\n'
+        for i in range(100):
+            src.operations += '{Foo *f = new Foo();}\n'
+            src.operations += '{Bar *b = new Bar();}\n'
         src.add_breakpoint()
         source = src.as_c_source()
 
-        out = self.program_test('test_cplusplus', source, is_cplusplus=True, commands=['run',  'heap sizes'])
+        out = self.program_test('test_cplusplus', source, is_cplusplus=True, commands=['run',  'heap sizes', 'heap'])
         # FIXME: add some verifications
         #print out
 
