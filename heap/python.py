@@ -203,8 +203,10 @@ def is_pyobject_ptr(addr):
 
     pyop = gdb.Value(addr).cast(_type_pyop)
     try:
-        if pyop['ob_refcnt'] < 0xffff:
-            if pyop['ob_type']['ob_refcnt'] < 0xffff:
+        ob_refcnt = pyop['ob_refcnt']
+        if ob_refcnt >=0 and ob_refcnt < 0xffff:
+            type_refcnt = pyop['ob_type']['ob_refcnt']
+            if type_refcnt >=0 and type_refcnt < 0xffff:
                 # Then this looks like a Python object:
                 return WrappedPointer(pyop)
     except RuntimeError:
