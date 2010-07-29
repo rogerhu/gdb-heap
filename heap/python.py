@@ -2,7 +2,7 @@
 This file is licensed under the PSF license
 '''
 import gdb
-from heap import WrappedPointer, caching_lookup_type, Usage, type_void_ptr
+from heap import WrappedPointer, caching_lookup_type, Usage, type_void_ptr, fmt_addr
 
 # Transliteration from Python's obmalloc.c:
 ALIGNMENT             = 8	
@@ -28,41 +28,71 @@ class PyArenaPtr(WrappedPointer):
     # Wrapper around a (void*) that's a Python arena's buffer (the
     # arena->address, as opposed to the (struct arena_object*) itself)
     @classmethod
-    def from_addr(cls, p):
+    def from_addr(cls, p, arenaobj):
         ptr = gdb.Value(p)
         ptr = ptr.cast(type_void_ptr)
-        return cls(ptr)
+        return cls(ptr, arenaobj)
 
-    #def __init__(self):
+    def __init__(self, gdbval, arenaobj):
+        WrappedPointer.__init__(self, gdbval)
+
+        assert(isinstance(arenaobj, ArenaObject))
+        self.arenaobj = arenaobj
+
+        # obmalloc.c sets up arenaobj->pool_address to the first pool
+        # address, aligning it to POOL_SIZE_MASK:
+        self.initial_pool_addr = self.as_address()
+        self.num_pools = ARENA_SIZE / POOL_SIZE
+        self.excess = self.initial_pool_addr & POOL_SIZE_MASK
+        if self.excess != 0:
+            self.num_pools -= 1
+            self.initial_pool_addr += POOL_SIZE - self.excess
+        
+    def __str__(self):
+        return ('PyArenaPtr([%s->%s], %i pools [%s->%s], excess: %i tracked by %s)'
+                % (fmt_addr(self.as_address()),
+                   fmt_addr(self.as_address() + ARENA_SIZE - 1),
+                   self.num_pools,
+                   fmt_addr(self.initial_pool_addr),
+                   fmt_addr(self.initial_pool_addr
+                            + (self.num_pools * POOL_SIZE) - 1),
+                   self.excess,
+                   self.arenaobj
+                   )
+                )
 
     def iter_pools(self):
         '''Yield a sequence of PyPoolPtr, representing all of the pools within
         this arena'''
-        # obmalloc.c sets up arenaobj->pool_address to the first pool address, aligning it to POOL_SIZE_MASK 
-        initial_pool_addr = self.as_address()
-        num_pools = ARENA_SIZE / POOL_SIZE
-        excess = initial_pool_addr & POOL_SIZE_MASK
-        if excess != 0:
-            num_pools -= 1
-            initial_pool_addr += POOL_SIZE - excess
-
         # print 'num_pools:', num_pools
-        pool_addr = initial_pool_addr
-        for idx in xrange(num_pools):
+        pool_addr = self.initial_pool_addr
+        for idx in xrange(self.num_pools):
+
+            # "pool_address" is a high-water-mark for activity within the arena;
+            # pools at this location or beyond haven't been initialized yet:
+            if pool_addr >= self.arenaobj.pool_address:
+                return
+
             pool = PyPoolPtr.from_addr(pool_addr)
             yield pool
             pool_addr += POOL_SIZE
 
     def iter_usage(self):
         '''Yield a series of Usage instances'''
-        initial_pool_addr = self.as_address()
-        excess = initial_pool_addr & POOL_SIZE_MASK
-        if excess != 0:
-            yield Usage(initial_pool_addr, excess, 'python arena alignment wastage')
+        if self.excess != 0:
+            # FIXME: this size is wrong
+            yield Usage(self.as_address(), self.excess, 'python arena alignment wastage')
 
         for pool in self.iter_pools():
+            # print 'pool:', pool
             for u in pool.iter_usage():
                 yield u
+
+        # FIXME: unused space (if any) between pool_address and the alignment top
+
+        # if self.excess != 0:
+        #    # FIXME: this address is wrong
+        #    yield Usage(self.as_address(), self.excess, 'python arena alignment wastage')
         
 
 class PyPoolPtr(WrappedPointer):
@@ -75,8 +105,8 @@ class PyPoolPtr(WrappedPointer):
         return cls(ptr)
 
     def __str__(self):
-        return ('PyPoolPtr([0x%x->0x%x: %d blocks of size %i bytes))'
-                % (self.as_address(), self.as_address() + POOL_SIZE,
+        return ('PyPoolPtr([%s->%s: %d blocks of size %i bytes))'
+                % (fmt_addr(self.as_address()), fmt_addr(self.as_address() + POOL_SIZE - 1),
                    self.num_blocks(), self.block_size()))
         
     @classmethod
@@ -129,11 +159,13 @@ class PyPoolPtr(WrappedPointer):
     def iter_free_blocks(self):
         '''Yield the sequence of free blocks within this pool.  Doesn't include
         the areas after nextoffset that have never been allocated'''
+        # print self._gdbval.dereference()
         size = self.block_size()
         freeblock = self.field('freeblock')
         _type_block_ptr_ptr = caching_lookup_type('unsigned char').pointer().pointer()
         # Walk the singly-linked list of free blocks for this chunk
         while long(freeblock) != 0:
+            # print 'freeblock:', (fmt_addr(long(freeblock)), long(size))
             yield (long(freeblock), long(size))
             freeblock = freeblock.cast(_type_block_ptr_ptr).dereference()
 
@@ -255,3 +287,59 @@ def python_arena_spelunking():
                         # group by type?
                     print categorize(start, size)
                         
+class ArenaObject(WrappedPointer):
+    '''
+    Wrapper around Python's struct arena_object*
+    Note that this is record-keeping for an arena, not the
+    memory itself
+    '''
+    @classmethod
+    def iter_arenas(cls):
+        try:
+            val_arenas = gdb.parse_and_eval('arenas')
+            val_maxarenas = gdb.parse_and_eval('maxarenas')
+        except RuntimeError:
+            # Not linked against python, or no debug information:
+            return
+
+        for i in xrange(val_maxarenas):
+            # Look up "&arenas[i]":
+            obj = ArenaObject(val_arenas[i].address)
+
+            # obj->address == 0 indicates an unused entry within the "arenas" array:
+            if obj.address != 0:
+                yield obj
+
+    def __init__(self, gdbval):
+        WrappedPointer.__init__(self, gdbval)
+
+        # Cache some values:
+        self.address = self.field('address')
+
+        # This is the high-water mark: at this point and beyond, the bytes of
+        # memory are untouched since malloc:
+        self.pool_address = self.field('pool_address')
+
+class ArenaDetection(object):
+    '''Detection of Python arenas, done as an object so that we can cache state'''
+    def __init__(self):
+        self.arenaobjs = list(ArenaObject.iter_arenas())
+
+    def as_py_arena(self, ptr, chunksize):
+        '''Detect if this ptr returned by malloc is in use as a Python arena,
+        returning PyArenaPtr if it is, None if not'''
+        # Fast rejection of too-small chunks:
+        if chunksize < (256 * 1024):
+            return None
+
+        for arenaobj in self.arenaobjs:
+            if ptr == arenaobj.address:
+                # Found it:
+                return PyArenaPtr.from_addr(ptr, arenaobj)
+
+        # Not found:
+        return None
+
+
+        
+

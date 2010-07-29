@@ -413,21 +413,29 @@ def as_nul_terminated_string(addr, size):
 def iter_usage():
     # Iterate through glibc, and within that, within Python arena blocks, as appropriate
     from heap.glibc import get_ms
-    from heap.python import PyArenaPtr
+    from heap.python import ArenaDetection, PyArenaPtr, ArenaObject
     ms = get_ms()
+
+    pyarenas = ArenaDetection()
+
     for i, chunk in enumerate(ms.iter_mmap_chunks()):
-        # Something of a hack: break down Python arenas by type:
-        if chunk.chunksize() == 266240: #FIXME: 256 * 1024 is 262144 so we're 4100 bytes out (not including chunk overhead)
-            arena_addr = chunk.as_mem()
-            arena = PyArenaPtr.from_addr(arena_addr)
+        mem_ptr = chunk.as_mem()
+        chunksize = chunk.chunksize()
+
+        # Locate python arenas in suitably-large areas (non-mmapped chunks
+        # won't be big enough, I believe):
+        arena = pyarenas.as_py_arena(mem_ptr, chunksize)
+        if arena:
             for u in arena.iter_usage():
                 yield u
         else:
-            yield Usage(long(chunk.as_mem()), chunk.chunksize())
+            yield Usage(long(mem_ptr), chunksize)
 
     for chunk in ms.iter_sbrk_chunks():
+        mem_ptr = chunk.as_mem()
+        chunksize = chunk.chunksize()
         if chunk.is_inuse():
-            yield Usage(long(chunk.as_mem()), chunk.chunksize())
+            yield Usage(long(mem_ptr), chunksize)
 
             
     
