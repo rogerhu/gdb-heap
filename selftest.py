@@ -333,7 +333,7 @@ Chunk size  Num chunks  Allocated size
         source = src.as_c_source()
 
         out = self.program_test('test_random_allocations', source, commands=['run'] + ['heap sizes', 'cont'] * 100)
-        print out
+        #print out
         # FIXME: do some verification at each breakpoint: check that the reported values correspond to what we expect
 
     def test_cplusplus(self):
@@ -351,7 +351,7 @@ class Foo {
 
         out = self.program_test('test_cplusplus', source, is_cplusplus=True, commands=['run',  'heap sizes'])
         # FIXME: add some verifications
-        print out
+        #print out
 
     def test_history(self):
         src = TestSource()
@@ -369,7 +369,7 @@ class Foo {
 
         out = self.program_test('test_history', source, 
                                 commands=['run', 'heap sizes', 'heap label foo', 'cont', 'heap log', 'heap diff'])
-        print out
+        #print out
         # FIXME
 
 
@@ -394,7 +394,8 @@ class Foo {
         self.assert_('string data' in out)
         self.assert_('python pool_header overhead' in out)
 
-        print out
+        # Re-enable this for debugging:
+        # print out
 
 if __name__ == "__main__":
     unittest.main()
