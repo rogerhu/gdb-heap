@@ -223,7 +223,7 @@ class HexdumpCmd(gdb.Command):
         size = 32
         while True:
             hd = hexdump_as_bytes(addr, size)
-            print ('%s -> %s %s' % (addr,  addr + size -1, hd))
+            print ('%s -> %s %s' % (fmt_addr(addr),  fmt_addr(addr + size -1), hd))
             addr += size
 
 
