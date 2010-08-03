@@ -11,7 +11,7 @@ has_gdb_execute_to_string = True
 try:
     # This will either capture the result, or fail before executing,
     # so in neither case should we get noise on stdout:
-    gdb.execute('help', to_string=True)
+    gdb.execute('info registers', to_string=True)
 except TypeError:
     has_gdb_execute_to_string = False
 

@@ -403,7 +403,8 @@ def categorize(addr, size):
     # be a bad interaction between pagination and redirection: all output from
     # "heap" disappears in the fallback form of execute, unless we "set pagination off"
     from heap.compat import has_gdb_execute_to_string
-    if has_gdb_execute_to_string:
+    #  Disable for now, see https://bugzilla.redhat.com/show_bug.cgi?id=620930
+    if False: # has_gdb_execute_to_string:
         from heap.cplusplus import get_class_name
         cpp_cls = get_class_name(addr, size)
         if cpp_cls:
