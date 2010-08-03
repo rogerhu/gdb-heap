@@ -292,9 +292,11 @@ class MallocPar(WrappedValue):
 
 def sbrk_base():
     mp_ = MallocPar.get()
-    #print mp_
-    return long(mp_.field('sbrk_base'))
-
+    try:
+        return long(mp_.field('sbrk_base'))
+    except RuntimeError, e:
+        check_missing_debuginfo(e, 'glibc')
+        raise e
 
 """
 """

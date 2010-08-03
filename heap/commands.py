@@ -9,7 +9,18 @@ from heap import iter_usage, \
     fmt_size, fmt_addr, \
     categorize, categorize_usage_list, \
     hexdump_as_bytes, \
-    Table
+    Table, \
+    MissingDebuginfo
+
+def need_debuginfo(f):
+    def g(self, args, from_tty):
+        try:
+            return f(self, args, from_tty)
+        except MissingDebuginfo, e:
+            print 'Missing debuginfo for %s' % e.module
+            print 'Suggested fix:'
+            print '    debuginfo-install %s' % e.module
+    return g
 
 class Heap(gdb.Command):
     'Print a report on memory usage, by category'
@@ -18,6 +29,8 @@ class Heap(gdb.Command):
                               "heap",
                               gdb.COMMAND_DATA,
                               prefix=True)
+
+    @need_debuginfo
     def invoke(self, args, from_tty):
         total_by_category = {}
         count_by_category = {}
@@ -63,6 +76,7 @@ class HeapSizes(gdb.Command):
         gdb.Command.__init__ (self,
                               "heap sizes",
                               gdb.COMMAND_DATA)
+    @need_debuginfo
     def invoke(self, args, from_tty):
         ms = get_ms()
         chunks_by_size = {}
@@ -99,6 +113,7 @@ class HeapUsed(gdb.Command):
                               "heap used",
                               gdb.COMMAND_DATA)
 
+    @need_debuginfo
     def invoke(self, args, from_tty):
         print 'Used chunks of memory on heap'
         print '-----------------------------'
@@ -124,6 +139,7 @@ class HeapAll(gdb.Command):
                               "heap all",
                               gdb.COMMAND_DATA)
 
+    @need_debuginfo
     def invoke(self, args, from_tty):
         print 'All chunks of memory on heap (both used and free)'
         print '-------------------------------------------------'
@@ -149,6 +165,7 @@ class HeapLog(gdb.Command):
                               "heap log",
                               gdb.COMMAND_DATA)
 
+    @need_debuginfo
     def invoke(self, args, from_tty):
         h = history
         if len(h.snapshots) == 0:
@@ -172,6 +189,7 @@ class HeapLabel(gdb.Command):
                               "heap label",
                               gdb.COMMAND_DATA)
 
+    @need_debuginfo
     def invoke(self, args, from_tty):
         s = history.add(args)
         print s.summary()
@@ -184,6 +202,7 @@ class HeapDiff(gdb.Command):
                               "heap diff",
                               gdb.COMMAND_DATA)
 
+    @need_debuginfo
     def invoke(self, args, from_tty):
         h = history
         if len(h.snapshots) == 0:

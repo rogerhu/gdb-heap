@@ -50,6 +50,17 @@ def offsetof(typename, fieldname):
     field = v[fieldname].cast(_type_void_ptr)
     return long(field.address)
 
+class MissingDebuginfo(RuntimeError):
+    def __init__(self, module):
+        self.module = module
+
+def check_missing_debuginfo(err, module):
+    assert(isinstance(err, RuntimeError))
+    if err.args[0] == 'Attempt to extract a component of a value that is not a (null).':
+        # Then we likely are trying to extract a field from a struct but don't
+        # have the DWARF description of the fields of the struct loaded:
+        raise MissingDebuginfo(module)
+
 class WrappedValue(object):
     """
     Base class, wrapping an underlying gdb.Value adding various useful methods,
