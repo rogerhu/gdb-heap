@@ -1,3 +1,4 @@
 *~
 *.pyc
 *.pyo
+gdb-heap-*.tar.bz2
