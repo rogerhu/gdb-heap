@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from gdb.heap import Category, caching_lookup_type
+
 def categorize_sqlite3(addr, usage_set, visited):
     # "struct sqlite3" is defined in src/sqliteInt.h, which is an internal header
     ptr_type = caching_lookup_type('sqlite3').pointer()    
@@ -23,7 +25,7 @@ def categorize_sqlite3(addr, usage_set, visited):
     aDb = obj_ptr['aDb']
     Db_addr = long(aDb)
     Db_malloc_addr = Db_addr - 8
-    if usage_set.set_addr_category(Db_malloc_addr, 'sqlite3 struct Db', visited):
+    if usage_set.set_addr_category(Db_malloc_addr, Category('sqlite3', 'struct Db', None), visited):
         print aDb['pBt'].dereference()
         # FIXME
 

@@ -23,8 +23,11 @@ e.g. /usr/src/debug/glibc-2.11.1/malloc/malloc.h and /usr/src/debug/glibc-2.11.1
 This file is licenced under the LGPLv2.1
 '''
 
-from heap import *
 import re
+
+import gdb
+
+from heap import WrappedPointer, WrappedValue, caching_lookup_type, type_char_ptr
 
 class MChunkPtr(WrappedPointer):
     '''Wrapper around glibc's mchunkptr

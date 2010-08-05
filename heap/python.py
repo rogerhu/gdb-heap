@@ -2,7 +2,7 @@
 This file is licensed under the PSF license
 '''
 import gdb
-from heap import WrappedPointer, caching_lookup_type, Usage, type_void_ptr, fmt_addr
+from heap import WrappedPointer, caching_lookup_type, Usage, type_void_ptr, fmt_addr, Category
 
 # Transliteration from Python's obmalloc.c:
 ALIGNMENT             = 8	
@@ -81,7 +81,7 @@ class PyArenaPtr(WrappedPointer):
         '''Yield a series of Usage instances'''
         if self.excess != 0:
             # FIXME: this size is wrong
-            yield Usage(self.as_address(), self.excess, 'python arena alignment wastage')
+            yield Usage(self.as_address(), self.excess, Category('pyarena', 'alignment wastage'))
 
         for pool in self.iter_pools():
             # print 'pool:', pool
@@ -92,7 +92,7 @@ class PyArenaPtr(WrappedPointer):
 
         # if self.excess != 0:
         #    # FIXME: this address is wrong
-        #    yield Usage(self.as_address(), self.excess, 'python arena alignment wastage')
+        #    yield Usage(self.as_address(), self.excess, Category('pyarena', 'alignment wastage'))
         
 
 class PyPoolPtr(WrappedPointer):
@@ -144,11 +144,11 @@ class PyPoolPtr(WrappedPointer):
         # The struct pool_header at the front:
         yield Usage(self.as_address(),
                     POOL_OVERHEAD(),
-                    'python pool_header overhead')
+                    Category('pyarena', 'pool_header overhead'))
 
         fb = list(self.iter_free_blocks())
         for (start, size) in fb:
-            yield Usage(start, size, 'python freed pool chunk')
+            yield Usage(start, size, Category('pyarena', 'freed pool chunk'))
 
         for (start, size) in self.iter_used_blocks():
             if (start, size) not in fb:

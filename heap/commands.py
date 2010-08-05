@@ -57,38 +57,36 @@ class Heap(gdb.Command):
             categorize_usage_list(usage_list)
             for u in usage_list:
                 u.ensure_category()
-                if u.category == 'uncategorized data':
-                    u.category += ' (%s bytes)' % u.size
-                if u.detail:
-                    detail = u.detail
-                else:
-                    detail = ''
                 total_size += u.size
-                key = (u.category, detail)
-                if key in total_by_category:
-                    total_by_category[key] += u.size
+                if u.category in total_by_category:
+                    total_by_category[u.category] += u.size
                 else:
-                    total_by_category[key] = u.size
+                    total_by_category[u.category] = u.size
 
                 total_count += 1
-                if key in count_by_category:
-                    count_by_category[key] += 1
+                if u.category in count_by_category:
+                    count_by_category[u.category] += 1
                 else:
-                    count_by_category[key] = 1
+                    count_by_category[u.category] = 1
                     
         except KeyboardInterrupt:
             pass # FIXME
 
-        t = Table(['Category', 'Count', 'Allocated size', 'Detail'])
-        for (category, detail) in sorted(total_by_category.keys(),
-                                         lambda s1, s2: cmp(total_by_category[s2],
-                                                            total_by_category[s1])
-                                         ):
-            t.add_row([category, 
-                       fmt_size(count_by_category[(category, detail)]),
-                       fmt_size(total_by_category[(category, detail)]),
-                       detail])
-        t.add_row(['TOTAL', fmt_size(total_count), fmt_size(total_size), ''])
+        t = Table(['Domain', 'Kind', 'Detail', 'Count', 'Allocated size'])
+        for category in sorted(total_by_category.keys(),
+                               lambda s1, s2: cmp(total_by_category[s2],
+                                                  total_by_category[s1])
+                               ):
+            detail = category.detail
+            if not detail:
+                detail = ''
+            t.add_row([category.domain,
+                       category.kind,
+                       detail,
+                       fmt_size(count_by_category[category]),
+                       fmt_size(total_by_category[category]),
+                       ])
+        t.add_row(['', '', 'TOTAL', fmt_size(total_count), fmt_size(total_size)])
         t.write(sys.stdout)
         print
 

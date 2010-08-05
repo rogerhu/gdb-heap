@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+from collections import namedtuple
+
 import gdb
 
 # We defer most type lookups to when they're needed, since they'll fail if the
@@ -151,34 +153,50 @@ def sign(amt):
     else:
         return '' # the '-' sign will come from the numeric repr
 
+
+class Category(namedtuple('Category', ('domain', 'kind', 'detail'))):
+    '''
+    Categorization of an in-use area of memory
+    
+      domain: high-level grouping e.g. "python", "C++", etc
+    
+      kind: type information, appropriate to the domain e.g. a class/type
+
+        Domain     Meaning of 'kind'
+        ------     -----------------
+        'C++'      the C++ class
+        'python'   the python class
+        'cpython'  C structure/type (implementation detail within Python)
+        'pyarena'  Python memory allocator
+    
+      detail: additional detail
+    '''
+
+    def __new__(_cls, domain, kind, detail=None):
+        return tuple.__new__(_cls, (domain, kind, detail))
+
 class Usage(object):
-    '''Information about an in-use area of memory'''
+    # Information about an in-use area of memory
+    slots = ('start', 'size', 'category', 'level', 'hd')
+
     def __init__(self, start, size, category=None, level=None, hd=None):
         assert isinstance(start, long)
         assert isinstance(size, long)
-
+        if category:
+            assert isinstance(category, Category)
         self.start = start
         self.size = size
         self.category = category
-        self.detail = None
         self.level = level
         self.hd = hd
-
+        
     def __repr__(self):
         result = 'Usage(%s, %s' % (hex(self.start), hex(self.size))
         if self.category:
             result += ', %r' % self.category
-        if self.detail:
-            result += ', %r' % self.detail
         if self.hd:
             result += ', hd=%r' % self.hd
         return result + ')'
-
-    def __hash__(self):
-        return hash(self.start) ^ hash(self.size) ^ hash(self.category) ^ hash(self.detail)
-
-    def __eq__(self, other):
-        return self.__dict__ == other.__dict__
 
     def ensure_category(self, usage_set=None):
         if self.category is None:
@@ -273,7 +291,7 @@ class UsageSet(object):
         # Ensure we can do fast lookups:
         self.usage_by_address = dict([(long(u.start), u) for u in usage_list])
 
-    def set_addr_category(self, addr, category, detail=None, level=0, visited=None, debug=False):
+    def set_addr_category(self, addr, category, level=0, visited=None, debug=False):
         '''Attempt to mark the given address as being of the given category,
         whilst maintaining a set of address already visited, to try to stop
         infinite graph traveral'''
@@ -296,7 +314,6 @@ class UsageSet(object):
                            % (addr, u.category, u.level))
                 return False
             u.category = category
-            u.detail = detail
             u.level = level            
             return True
         else:
@@ -331,25 +348,29 @@ class PythonCategorizer(object):
         if u.category == 'python dict':
             dict_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyDictObject_ptr)
             ma_table = long(dict_ptr['ma_table'])
-            usage_set.set_addr_category(ma_table, 'PyDictEntry table')
+            usage_set.set_addr_category(ma_table,
+                                        Category('cpython', 'PyDictEntry table', None))
             return True
 
         elif u.category == 'python list':
             list_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyListObject_ptr)
             ob_item = long(list_ptr['ob_item'])
-            usage_set.set_addr_category(ob_item, 'PyListObject ob_item table')
+            usage_set.set_addr_category(ob_item,
+                                        Category('cpython', 'PyListObject ob_item table', None))
             return True
 
         elif u.category == 'python set':
             set_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PySetObject_ptr)
             table = long(set_ptr['table'])
-            usage_set.set_addr_category(table, 'PySetObject setentry table')
+            usage_set.set_addr_category(table,
+                                        Category('cpython', 'PySetObject setentry table', None))
             return True
 
         elif u.category == 'python unicode':
             unicode_ptr = gdb.Value(u.start).cast(self._type_PyUnicodeObject_ptr)
             m_str = long(unicode_ptr['str'])
-            usage_set.set_addr_category(m_str, 'PyUnicodeObject buffer')
+            usage_set.set_addr_category(m_str,
+                                        Category('cpython', 'PyUnicodeObject buffer', None))
             return True
 
         elif u.category == 'python sqlite3.Statement':
@@ -378,9 +399,9 @@ class PythonCategorizer(object):
                 obj_ptr = gdb.Value(u.start).cast(ptr_type)
                 # print obj_ptr.dereference()
                 h = obj_ptr['h']
-                if usage_set.set_addr_category(long(h), 'rpm Header'):
+                if usage_set.set_addr_category(long(h), Category('rpm', 'Header', None)):
                     blob = h['blob']
-                    usage_set.set_addr_category(long(blob), 'rpm Header blob')
+                    usage_set.set_addr_category(long(blob), Category('rpm', 'Header blob', None))
 
         elif u.category == 'python rpm.mi':
             ptr_type = caching_lookup_type('struct rpmmiObject_s').pointer()
@@ -388,7 +409,7 @@ class PythonCategorizer(object):
                 obj_ptr = gdb.Value(u.start).cast(ptr_type)
                 print obj_ptr.dereference()
                 mi = obj_ptr['mi']
-                if usage_set.set_addr_category(long(h), 'rpmdbMatchIterator'):
+                if usage_set.set_addr_category(long(h), Category('rpm', 'rpmdbMatchIterator', None)):
                     pass
                     #blob = h['blob']
                     #usage_set.set_addr_category(long(blob), 'rpm Header blob')
@@ -439,21 +460,21 @@ def categorize(addr, size, usage_set):
                 #print ((PyInstanceObject*)op)->in_dict (mark this as __dict__ of type)
                 in_class = inst.field('in_class')
                 #print 'in_class', in_class
-                cl_name = in_class['cl_name']
+                cl_name = str(in_class['cl_name'])
                 #print 'cl_name', cl_name
-                cat = str(cl_name)
+                cat = Category('python', cl_name, 'old-style')
 
                 # Visit the in_dict:
                 if usage_set:
                     in_dict = inst.field('in_dict')
                     #print 'in_dict', in_dict
 
-                    dict_detail = '%s -> in_dict' % cat
+                    dict_detail = '%s -> in_dict' % cl_name
 
                     # Mark the ptr as being a dictionary, adding detail
                     usage_set.set_addr_category(obj_addr_to_gc_addr(in_dict),
-                                                'PyDictObject',
-                                                detail = dict_detail, level=1)
+                                                Category('cpython', 'PyDictObject', dict_detail),
+                                                level=1)
 
                     # Visit ma_table:
                     # FIXME: move this into python-specific code
@@ -463,14 +484,15 @@ def categorize(addr, size, usage_set):
                     ma_table = long(in_dict['ma_table'])
 
                     # Record details:
-                    usage_set.set_addr_category(ma_table, 'PyDictEntry table',
-                                                detail = dict_detail, level=2)
+                    usage_set.set_addr_category(ma_table,
+                                                Category('cpython', 'PyDictEntry table', dict_detail),
+                                                level=2)
                 return cat
 
             # FIXME: new style classes: should share code with the prettyprinters
             # print HeapTypeObjectPtr
 
-            return 'python %s' % str(tp_name)
+            return Category('python', str(tp_name))
         except (RuntimeError, UnicodeEncodeError, UnicodeDecodeError):
             # If something went wrong, assume that this wasn't really a python
             # object, and fall through:
@@ -485,14 +507,14 @@ def categorize(addr, size, usage_set):
         from heap.cplusplus import get_class_name
         cpp_cls = get_class_name(addr, size)
         if cpp_cls:
-            return cpp_cls
+            return Category('C++', cpp_cls)
 
     s = as_nul_terminated_string(addr, size)
     if s and len(s) > 2:
-        return 'string data'
+        return Category('C', 'string data')
 
     # Uncategorized:
-    return 'uncategorized data'
+    return Category('uncategorized', '', '%s bytes' % size)
 
 def as_nul_terminated_string(addr, size):
     # Does this look like a NUL-terminated string?
