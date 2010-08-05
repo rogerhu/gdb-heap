@@ -59,30 +59,36 @@ class Heap(gdb.Command):
                 u.ensure_category()
                 if u.category == 'uncategorized data':
                     u.category += ' (%s bytes)' % u.size
-                total_size += u.size
-                if u.category in total_by_category:
-                    total_by_category[u.category] += u.size
+                if u.detail:
+                    detail = u.detail
                 else:
-                    total_by_category[u.category] = u.size
+                    detail = ''
+                total_size += u.size
+                key = (u.category, detail)
+                if key in total_by_category:
+                    total_by_category[key] += u.size
+                else:
+                    total_by_category[key] = u.size
 
                 total_count += 1
-                if u.category in count_by_category:
-                    count_by_category[u.category] += 1
+                if key in count_by_category:
+                    count_by_category[key] += 1
                 else:
-                    count_by_category[u.category] = 1
+                    count_by_category[key] = 1
                     
         except KeyboardInterrupt:
             pass # FIXME
 
-        t = Table(['Category', 'Count', 'Allocated size'])
-        for category in sorted(total_by_category.keys(),
-                               lambda s1, s2: cmp(total_by_category[s2],
-                                                  total_by_category[s1])
-                               ):
+        t = Table(['Category', 'Count', 'Allocated size', 'Detail'])
+        for (category, detail) in sorted(total_by_category.keys(),
+                                         lambda s1, s2: cmp(total_by_category[s2],
+                                                            total_by_category[s1])
+                                         ):
             t.add_row([category, 
-                       fmt_size(count_by_category[category]),
-                       fmt_size(total_by_category[category])])
-        t.add_row(['TOTAL', fmt_size(total_count), fmt_size(total_size)])
+                       fmt_size(count_by_category[(category, detail)]),
+                       fmt_size(total_by_category[(category, detail)]),
+                       detail])
+        t.add_row(['TOTAL', fmt_size(total_count), fmt_size(total_size), ''])
         t.write(sys.stdout)
         print
 
@@ -139,7 +145,7 @@ class HeapUsed(gdb.Command):
                 continue
             size = chunk.chunksize()
             mem = chunk.as_mem()
-            category = categorize(mem, size) # FIXME: this is actually the size of the full chunk, rather than that seen by the program
+            category = categorize(mem, size, None) # FIXME: this is actually the size of the full chunk, rather than that seen by the program
             hd = hexdump_as_bytes(mem, 32)
             print ('%6i: %s -> %s %8i bytes %20s |%s'
                    % (i, 

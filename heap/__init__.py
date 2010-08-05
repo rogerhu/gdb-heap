@@ -112,6 +112,10 @@ class WrappedPointer(WrappedValue):
                    )
                 )
 
+    def cast(self, type_):
+        return WrappedPointer(self._gdbval.cast(type_))
+
+
 if sizeof_ptr == 4:
     def fmt_addr(addr):
         return '0x%08x' % addr
@@ -149,32 +153,36 @@ def sign(amt):
 
 class Usage(object):
     '''Information about an in-use area of memory'''
-    def __init__(self, start, size, category=None, hd=None):
+    def __init__(self, start, size, category=None, level=None, hd=None):
         assert isinstance(start, long)
         assert isinstance(size, long)
 
         self.start = start
         self.size = size
         self.category = category
+        self.detail = None
+        self.level = level
         self.hd = hd
 
     def __repr__(self):
         result = 'Usage(%s, %s' % (hex(self.start), hex(self.size))
         if self.category:
             result += ', %r' % self.category
+        if self.detail:
+            result += ', %r' % self.detail
         if self.hd:
             result += ', hd=%r' % self.hd
         return result + ')'
 
     def __hash__(self):
-        return hash(self.start) & hash(self.size) & hash(self.category)
+        return hash(self.start) ^ hash(self.size) ^ hash(self.category) ^ hash(self.detail)
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
-    def ensure_category(self):
+    def ensure_category(self, usage_set=None):
         if self.category is None:
-            self.category = categorize(self.start, self.size)
+            self.category = categorize(self.start, self.size, usage_set)
 
     def ensure_hexdump(self):
         if self.hd is None:
@@ -265,7 +273,7 @@ class UsageSet(object):
         # Ensure we can do fast lookups:
         self.usage_by_address = dict([(long(u.start), u) for u in usage_list])
 
-    def set_addr_category(self, addr, category, visited=None, debug=False):
+    def set_addr_category(self, addr, category, detail=None, level=0, visited=None, debug=False):
         '''Attempt to mark the given address as being of the given category,
         whilst maintaining a set of address already visited, to try to stop
         infinite graph traveral'''
@@ -279,7 +287,17 @@ class UsageSet(object):
         if addr in self.usage_by_address:
             if debug:
                 print 'addr 0x%x found (for category %r)' % (addr, category)
-            self.usage_by_address[addr].category = category
+            u = self.usage_by_address[addr]
+            # Bail if we already have a more detailed categorization for the
+            # address:
+            if level <= u.level:
+                if debug:
+                    print ('addr 0x%x already has category %r (level %r)'
+                           % (addr, u.category, u.level))
+                return False
+            u.category = category
+            u.detail = detail
+            u.level = level            
             return True
         else:
             if debug:
@@ -392,7 +410,7 @@ def categorize_usage_list(usage_list):
 
     for u in usage_list:
         # Cover the simple cases, where the category can be figured out directly:
-        u.ensure_category()
+        u.ensure_category(usage_set)
 
         # Try to categorize buffers used by python objects:
         if pycategorizer:
@@ -401,14 +419,57 @@ def categorize_usage_list(usage_list):
 
 
 
-def categorize(addr, size):
-    '''Given an in-use block, try to guess what it's being used for'''
-    from heap.python import as_python_object
+def categorize(addr, size, usage_set):
+    '''Given an in-use block, try to guess what it's being used for
+    If usage_set is provided, this categorization may lead to further
+    categorizations'''
+    from heap.python import as_python_object, obj_addr_to_gc_addr
     pyop = as_python_object(addr)
     if pyop:
         try:
             ob_type = WrappedPointer(pyop.field('ob_type'))
             tp_name = ob_type.field('tp_name').string()
+            if tp_name == 'instance':
+                #print 'got instance'
+                __type_PyInstanceObject = caching_lookup_type('PyInstanceObject').pointer()
+                #print '__type_PyInstanceObject', __type_PyInstanceObject
+                inst = pyop.cast(__type_PyInstanceObject)
+                #print 'inst', inst
+
+                #print ((PyInstanceObject*)op)->in_dict (mark this as __dict__ of type)
+                in_class = inst.field('in_class')
+                #print 'in_class', in_class
+                cl_name = in_class['cl_name']
+                #print 'cl_name', cl_name
+                cat = str(cl_name)
+
+                # Visit the in_dict:
+                if usage_set:
+                    in_dict = inst.field('in_dict')
+                    #print 'in_dict', in_dict
+
+                    dict_detail = '%s -> in_dict' % cat
+
+                    # Mark the ptr as being a dictionary, adding detail
+                    usage_set.set_addr_category(obj_addr_to_gc_addr(in_dict),
+                                                'PyDictObject',
+                                                detail = dict_detail, level=1)
+
+                    # Visit ma_table:
+                    # FIXME: move this into python-specific code
+                    _type_PyDictObject_ptr = caching_lookup_type('PyDictObject').pointer()
+                    in_dict = in_dict.cast(_type_PyDictObject_ptr)
+
+                    ma_table = long(in_dict['ma_table'])
+
+                    # Record details:
+                    usage_set.set_addr_category(ma_table, 'PyDictEntry table',
+                                                detail = dict_detail, level=2)
+                return cat
+
+            # FIXME: new style classes: should share code with the prettyprinters
+            # print HeapTypeObjectPtr
+
             return 'python %s' % str(tp_name)
         except (RuntimeError, UnicodeEncodeError, UnicodeDecodeError):
             # If something went wrong, assume that this wasn't really a python

@@ -152,7 +152,7 @@ class PyPoolPtr(WrappedPointer):
 
         for (start, size) in self.iter_used_blocks():
             if (start, size) not in fb:
-                yield Usage(start, size) #, 'python pool: ' + categorize(start, size))
+                yield Usage(start, size) #, 'python pool: ' + categorize(start, size, None))
 
         # FIXME: yield any wastage at the end
 
@@ -215,6 +215,13 @@ def is_pyobject_ptr(addr):
         pass # Not a python object (or corrupt)
     
     # Doesn't look like a python object, implicit return None
+
+def obj_addr_to_gc_addr(addr):
+    '''Given a PyObject* address, convert to a PyGC_Head* address
+    (i.e. the allocator's view of the same)'''
+    #print 'obj_addr_to_gc_addr(%s)' % fmt_addr(long(addr))
+    _type_PyGC_Head = caching_lookup_type('PyGC_Head')
+    return long(addr) - _type_PyGC_Head.sizeof
 
 def as_python_object(addr):
     '''Given an address of an allocation, determine if it holds a PyObject,
@@ -289,7 +296,7 @@ def python_arena_spelunking():
                     if pyop:
                         print pyop._gdbval
                         # group by type?
-                    print categorize(start, size)
+                    print categorize(start, size, None)
                         
 class ArenaObject(WrappedPointer):
     '''
