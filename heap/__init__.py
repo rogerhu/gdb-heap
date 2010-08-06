@@ -195,7 +195,7 @@ class Usage(object):
     def __repr__(self):
         result = 'Usage(%s, %s' % (hex(self.start), hex(self.size))
         if self.category:
-            result += ', %r' % self.category
+            result += ', %r' % (self.category, )
         if self.hd:
             result += ', hd=%r' % self.hd
         return result + ')'
