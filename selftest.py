@@ -716,7 +716,23 @@ public:
         # giving a total count of 7+6+5+4 = 22
         self.assertEquals(len(middle_out.rows), 22)
 
+    def test_select_by_category(self):
+        out = self.command_test(['python', '-c', 'id(42)'],
+                                commands=['set breakpoint pending yes',
+                                          'break builtin_id',
+                                          'run',
+                                          'heap select domain="python" and kind="str" and size > 512'],
+                                breakpoint='builtin_id')
 
+        tables = ParsedTable.parse_lines(out)
+        select_out = tables[0]
+
+        # Ensure that the filtering mechanism worked:
+        if len(select_out.rows) < 10:
+            self.fail("Didn't find any large python strings (has something gone wrong?) in: %s" % select_out)
+        for row in select_out.rows:
+            self.assertEquals(row[2], 'python')
+            self.assertEquals(row[3], 'str')
 
 from heap.parser import parse_query
 from heap.query import Constant, And, Or, Not, GetAttr, \

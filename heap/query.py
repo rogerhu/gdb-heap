@@ -42,9 +42,10 @@ class GetAttr(Expression):
         return 'GetAttr(%r)' % (self.attrname,)
 
     def eval_(self, u):
-        if self.attrname == 'category':
+        if self.attrname in ('domain', 'kind', 'detail'):
             if u.category == None:
                 u.ensure_category()
+            return getattr(u.category, self.attrname)
         return getattr(u, self.attrname)
 
 class BinaryOp(Expression):
