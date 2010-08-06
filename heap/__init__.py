@@ -18,6 +18,8 @@ from collections import namedtuple
 
 import gdb
 
+NUM_HEXDUMP_BYTES = 20
+
 # We defer most type lookups to when they're needed, since they'll fail if the
 # DWARF data for the relevant DSO hasn't been loaded yet, which is typically
 # the case for an executable dynamically linked against glibc
@@ -204,7 +206,7 @@ class Usage(object):
 
     def ensure_hexdump(self):
         if self.hd is None:
-            self.hd = hexdump_as_bytes(self.start, 32)
+            self.hd = hexdump_as_bytes(self.start, NUM_HEXDUMP_BYTES)
 
 
 def hexdump_as_bytes(addr, size):
