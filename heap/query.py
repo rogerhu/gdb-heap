@@ -144,7 +144,12 @@ def do_query(args):
     from heap import fmt_addr, Table
     from heap.parser import parse_query
 
-    filter_ = parse_query(args)
+    if args == '':
+        # if no query supplied, select everything:
+        filter_ = Constant(True)
+    else:
+        filter_ = parse_query(args)
+
     if False:
         print args
         print filter_

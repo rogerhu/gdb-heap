@@ -643,10 +643,31 @@ public:
                           [('Kind', 'pool_header overhead'),
                            ('Domain', 'pyarena')])
 
+    def test_select(self):
+        # Ensure that "heap select" with no query does something sane
+        src = TestSource()
+        for i in range(3):
+            src.add_malloc(1024)
+        src.add_breakpoint()
+        source = src.as_c_source()
+
+        out = self.program_test('test_select', source,
+                                commands=['run',
+                                          'heap select',
+                                          ])
+        tables = ParsedTable.parse_lines(out)
+        select_out = tables[0]
+
+        # The "heap select" command should select all blocks:
+        self.assertEquals(select_out.colnames,
+                          ('Start', 'End', 'Domain', 'Kind', 'Detail', 'Hexdump'))
+        self.assertEquals(len(select_out.rows), 3)
+
 
     def test_select_by_size(self):
         src = TestSource()
-        # allocate ten 1kb blocks, nine 2kb blocks, etc, down to one 10kb block so that we can easily query them by size
+        # Allocate ten 1kb blocks, nine 2kb blocks, etc, down to one 10kb
+        # block so that we can easily query them by size:
         for i in range(10):
             for j in range(10-i):
                 size = 1024 * (i+1)
