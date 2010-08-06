@@ -134,20 +134,26 @@ class TestProgram(object):
         # Check that the binary exists:
         assert(os.path.exists(self.name))
 
-class ColumnNotFound(Exception):
-    def __init__(self, colname):
-        self.colname = colname
-
 def indent(str_):
     return '\n'.join([(' ' * 4) + line
                       for line in str_.splitlines()])
+
+class ColumnNotFound(Exception):
+    def __init__(self, colname, table):
+        self.colname = colname
+        self.table = table
+
+    def __str__(self):
+        return ('ColumnNotFound(%s) in:\n%s'
+                % (self.colname, indent(str(self.table))))
 
 class RowNotFound(Exception):
     def __init__(self, criteria, table):
         self.criteria = criteria
         self.table = table
     def __str__(self):
-        return 'RowNotFound(%s) in:\n%s' % (self.criteria, indent(str(self.table)))
+        return ('RowNotFound(%s) in:\n%s'
+                % (self.criteria, indent(str(self.table))))
 
 class Criteria(object):
     '''A list of (colname, value) criteria for searching rows in a table'''
@@ -216,7 +222,7 @@ class ParsedTable(object):
         for x, col in enumerate(self.colnames):
             if colname == col:
                 return x
-        raise ColumnNotFound(colname)
+        raise ColumnNotFound(colname, self)
 
     def find_row(self, kvs):
         # Find the first row matching the criteria, or raise RowNotFound
