@@ -540,8 +540,6 @@ def iter_usage():
         mem_ptr = chunk.as_mem()
         chunksize = chunk.chunksize()
 
-        # Locate python arenas in suitably-large areas (non-mmapped chunks
-        # won't be big enough, I believe):
         arena = pyarenas.as_py_arena(mem_ptr, chunksize)
         if arena:
             for u in arena.iter_usage():
@@ -553,7 +551,12 @@ def iter_usage():
         mem_ptr = chunk.as_mem()
         chunksize = chunk.chunksize()
         if chunk.is_inuse():
-            yield Usage(long(mem_ptr), chunksize)
+            arena = pyarenas.as_py_arena(mem_ptr, chunksize)
+            if arena:
+                for u in arena.iter_usage():
+                    yield u
+            else:
+                yield Usage(long(mem_ptr), chunksize)
 
             
     
