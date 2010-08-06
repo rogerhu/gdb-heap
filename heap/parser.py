@@ -91,74 +91,31 @@ precedence = (
     ('left', 'COMPARISON'),
 )
 
-class Expression(object):
-    def __eq__(self, other):
-        if type(self) != type(other):
-            return False
+from heap.query import Constant, And, Or, Not, GetAttr, \
+    Comparison__le__, Comparison__lt__, Comparison__eq__, \
+    Comparison__ne__, Comparison__ge__, Comparison__gt__
 
-        return self.__dict__ == other.__dict__
-
-    def iter_usage(self):
-        from heap import iter_usage
-        for u in iter_usage():
-            if self._eval(u):
-                yield u
-    
-    def _eval(self, ctx):
-        raise NotImplementedError
-
-class Comparison(Expression):
-    def __init__(self, lhs, op, rhs):
-        self.lhs = lhs
-        self.op = op
-        self.rhs = rhs
-
-    def __repr__(self):
-        return 'Comparison(%r, %r, %r)' % (self.lhs, self.op, self.rhs)
-
-    def __eq__(self, other):
-        return self.lhs == other.lhs and self.op == other.op and self.rhs == other.rhs
-
-    def _eval(self, ctx):
-        lhs = self.lhs._eval(ctx)
-        rhs = self.rhs._eval(ctx)
-        return getattr(lhs, self.op)(rhs)
-        #intattrs = ('start', 'size')
-        #if self.lhs in intattrs:
-        #print 'foo'
-
-class InfixBoolean(object):
-    def __init__(self, a, b):
-        self.a = a
-        self.b = b
-    def __eq__(self, other):
-        return self.a == other.a and self.b == other.b
-        
-class And(InfixBoolean):
-    def __repr__(self):
-        return 'And(%r, %r)' % (self.a, self.b)
-
-class Or(InfixBoolean):
-    def __repr__(self):
-        return 'Or(%r, %r)' % (self.a, self.b)
-
-class Not(object):
-    def __init__(self, a):
-        self.a = a
-    def __repr__(self):
-        return 'Not(%r)' % (self.a, )
 
 def p_expression_number(t):
     'expression : LITERAL_NUMBER'
-    t[0] = t[1]
+    t[0] = Constant(t[1])
 
 def p_expression_string(t):
     'expression : LITERAL_STRING'
-    t[0] = t[1]
+    t[0] = Constant(t[1])
 
 def p_comparison(t):
     'expression : expression COMPARISON expression'
-    t[0] = Comparison(t[1], t[2], t[3])
+    classes = { '<=' : Comparison__le__,
+                '<'  : Comparison__lt__,
+                '==' : Comparison__eq__,
+                '='  : Comparison__eq__,
+                '!=' : Comparison__ne__,
+                '>=' : Comparison__ge__,
+                '>'  : Comparison__gt__ }
+    cls = classes[t[2]]
+
+    t[0] = cls(t[1], t[3])
 
 def p_and(t):
     'expression : expression AND expression'
@@ -176,10 +133,9 @@ def p_expression_group(t):
     'expression : LPAREN expression RPAREN'
     t[0] = t[2]
 
-
 def p_expression_name(t):
     'expression : ID'
-    t[0] = t[1]
+    t[0] = GetAttr(t[1])
  
 class ParserError(Exception):
     def __init__(self, input_, pos, value):

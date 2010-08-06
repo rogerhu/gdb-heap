@@ -644,23 +644,83 @@ public:
                            ('Domain', 'pyarena')])
 
 
-from heap.parser import parse_query, Comparison, And
+    def test_select_by_size(self):
+        src = TestSource()
+        # allocate ten 1kb blocks, nine 2kb blocks, etc, down to one 10kb block so that we can easily query them by size
+        for i in range(10):
+            for j in range(10-i):
+                size = 1024 * (i+1)
+                src.add_malloc(size)
+        src.add_breakpoint()
+        source = src.as_c_source()
+
+        out = self.program_test('test_large_allocations', source,
+                                commands=['run',
+                                          'heap',
+
+                                          'heap select size >= 10240',
+                                          # (parsed as "largest_out" below)
+
+                                          'heap select size < 2048',
+                                          # (parsed as "smallest_out" below)
+
+                                          'heap select size >= 4096 and size < 8192',
+                                          # (parsed as "middle_out" below)
+                                          ])
+        tables = ParsedTable.parse_lines(out)
+        heap_out = tables[0]
+        largest_out = tables[1]
+        smallest_out = tables[2]
+        middle_out = tables[3]
+
+        # The "heap" command should find all the allocations:
+        self.assertHasRow(heap_out,
+                          [('Detail', 'TOTAL'), ('Count', 55)])
+
+        # The query for the largest should find just one allocation:
+        self.assertEquals(len(largest_out.rows), 1)
+
+        # The query for the smallest should find ten allocations:
+        self.assertEquals(len(smallest_out.rows), 10)
+
+        # The middle query [4096, 8192) should capture the following
+        # allocations:
+        #   7 of (4*4096), 6 of (5*4096), 5 of (6*4096) and 4 of (7*4096)
+        # giving a total count of 7+6+5+4 = 22
+        self.assertEquals(len(middle_out.rows), 22)
+
+
+
+from heap.parser import parse_query
+from heap.query import Constant, And, Or, Not, GetAttr, \
+    Comparison__le__, Comparison__lt__, Comparison__eq__, \
+    Comparison__ne__, Comparison__ge__, Comparison__gt__
+
 class QueryParsingTests(unittest.TestCase):
     def assertParsesTo(self, s, result):
         self.assertEquals(parse_query(s), result)
 
     def test_simple_comparisons(self):
         self.assertParsesTo('size >= 1024',
-                            Comparison('size', '>=', 1024L))
+                            Comparison__ge__(GetAttr('size'), Constant(1024)))
+
+        # Check that hexadecimal numeric literals are parsed:
         self.assertParsesTo('addr > 0xbf70ffff',
-                            Comparison('addr', '>', 0xbf70ffff))
+                            Comparison__gt__(GetAttr('addr'), Constant(0xbf70ffff)))
 
+        # Check that string literals are parsed:
         self.assertParsesTo('kind == "str"',
-                            Comparison('kind', '==', 'str'))
+                            Comparison__eq__(GetAttr('kind'), Constant('str')))
 
+        # Check "and":
         self.assertParsesTo('kind == "str" and size > 1024',
-                            And(Comparison('kind', '==', 'str'),
-                                Comparison('size', '>', 1024L)))
+                            And(Comparison__eq__(GetAttr('kind'), Constant('str')),
+                                Comparison__gt__(GetAttr('size'), Constant(1024))))
+
+        # Check "or":
+        self.assertParsesTo('size > 10000 and not domain="uncategorized"',
+                            And(Comparison__gt__(GetAttr('size'), Constant(10000)),
+                                Not(Comparison__eq__(GetAttr('domain'), Constant('uncategorized')))))
 
         # Do we want algebraic support?
         #self.assertParsesTo('size == (256 * 1024)+8',

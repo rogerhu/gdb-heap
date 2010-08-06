@@ -16,41 +16,111 @@
 
 import sys
 
-import gdb
-
-class UsageFilter(object):
-    def matches(self, u):
+class Expression(object):
+    def eval_(self, u):
         raise NotImplementedError
 
-class CompoundUsageFilter(object):
-    def __init__(self, *nested):
-        self.nested = nested
+    def __eq__(self, other):
+        return (self.__class__ == other.__class__
+                and self.__dict__ == other.__dict__)
 
-class And(CompoundUsageFilter):
-    def matches(self, u):
-        for n in self.nested:
-            if not n.matches(u):
-                return False
-        return True
-
-class AttrFilter(UsageFilter):
-    def __init__(self, attrname, value):
-        self.attrname = attrname
+class Constant(Expression):
+    def __init__(self, value):
         self.value = value
 
-    def matches(self, u):
+    def __repr__(self):
+        return 'Constant(%r)' % (self.value,)
+
+    def eval_(self, u):
+        return self.value
+
+class GetAttr(Expression):
+    def __init__(self, attrname):
+        self.attrname = attrname
+
+    def __repr__(self):
+        return 'GetAttr(%r)' % (self.attrname,)
+
+    def eval_(self, u):
         if self.attrname == 'category':
             if u.category == None:
                 u.ensure_category()
-        actual_value = getattr(u, self.attrname)
-        return self._do_match(actual_value)
+        return getattr(u, self.attrname)
 
-    def _do_match(self, actual):
+class BinaryOp(Expression):
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
+
+class Comparison(BinaryOp):
+    def __init__(self, lhs, rhs):
+        BinaryOp.__init__(self, lhs, rhs)
+
+    def __repr__(self):
+        return '%s(%r, %r)' % (self.__class__.__name__, self.lhs, self.rhs)
+
+    def eval_(self, u):
+        lhs_val = self.lhs.eval_(u)
+        rhs_val = self.rhs.eval_(u)
+        return self.cmp_(lhs_val, rhs_val)
+
+    def cmp_(self, lhs, rhs):
         raise NotImplementedError
 
-class AttrGt(AttrFilter):
-    def _do_match(self, actual):
-        return actual >= self.value
+class Comparison__le__(Comparison):
+    def cmp_(self, lhs, rhs):
+        return lhs <= rhs
+
+class Comparison__lt__(Comparison):
+    def cmp_(self, lhs, rhs):
+        return lhs <  rhs
+
+class Comparison__eq__(Comparison):
+    def cmp_(self, lhs, rhs):
+        return lhs == rhs
+
+class Comparison__ne__(Comparison):
+    def cmp_(self, lhs, rhs):
+        return lhs != rhs
+
+class Comparison__ge__(Comparison):
+    def cmp_(self, lhs, rhs):
+        return lhs >= rhs
+
+class Comparison__gt__(Comparison):
+    def cmp_(self, lhs, rhs):
+        return lhs >  rhs
+
+
+class And(BinaryOp):
+    def __repr__(self):
+        return 'And(%r, %r)' % (self.lhs, self.rhs)
+
+    def eval_(self, u):
+        # Short-circuit evaluation:
+        if not self.lhs.eval_(u):
+            return False
+        return self.rhs.eval_(u)
+
+class Or(BinaryOp):
+    def __repr__(self):
+        return 'Or(%r, %r)' % (self.lhs, self.rhs)
+
+    def eval_(self, u):
+        # Short-circuit evaluation:
+        if self.lhs.eval_(u):
+            return True
+        return self.rhs.eval_(u)
+
+class Not(Expression):
+    def __init__(self, inner):
+        self.inner = inner
+    def __repr__(self):
+        return 'Not(%r)' % (self.inner, )
+    def eval_(self, u):
+        return not self.inner.eval_(u)
+
+
 
 class Column(object):
     def __init__(self, name, getter, formatter):
@@ -66,17 +136,18 @@ class Query(object):
     def __iter__(self):
         from heap import iter_usage
         for u in iter_usage():
-            if self.filter_.matches(u):
+            if self.filter_.eval_(u):
                 yield u
 
 
 def do_query(args):
     from heap import fmt_addr, Table
+    from heap.parser import parse_query
 
-    print repr(args)
-
-    # FIXME: implement a real parser
-    filter_ = AttrGt('size', 10000)
+    filter_ = parse_query(args)
+    if False:
+        print args
+        print filter_
 
     columns = [Column('Start',
                       lambda u: u.start,
@@ -124,5 +195,6 @@ def do_query(args):
                    u.hd])
 
     t.write(sys.stdout)
+    print
     
     
