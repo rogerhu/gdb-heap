@@ -16,19 +16,33 @@
 
 from collections import namedtuple
 
-import gdb
+try:
+    import gdb
+
+
+    # We defer most type lookups to when they're needed, since they'll fail if the
+    # DWARF data for the relevant DSO hasn't been loaded yet, which is typically
+    # the case for an executable dynamically linked against glibc
+
+    type_void_ptr = gdb.lookup_type('void').pointer()
+    type_char_ptr = gdb.lookup_type('char').pointer()
+    type_unsigned_char_ptr = gdb.lookup_type('unsigned char').pointer()
+
+    sizeof_ptr = type_void_ptr.sizeof
+
+    if sizeof_ptr == 4:
+        def fmt_addr(addr):
+            return '0x%08x' % addr
+    else:
+        # Assume 64-bit:
+        def fmt_addr(addr):
+            return '0x%016x' % addr
+
+except ImportError:
+    # Support importing heap.parser from outside gdb
+    pass
 
 NUM_HEXDUMP_BYTES = 20
-
-# We defer most type lookups to when they're needed, since they'll fail if the
-# DWARF data for the relevant DSO hasn't been loaded yet, which is typically
-# the case for an executable dynamically linked against glibc
-
-type_void_ptr = gdb.lookup_type('void').pointer()
-type_char_ptr = gdb.lookup_type('char').pointer()
-type_unsigned_char_ptr = gdb.lookup_type('unsigned char').pointer()
-
-sizeof_ptr = type_void_ptr.sizeof
 
 __type_cache = {}
 
@@ -119,14 +133,6 @@ class WrappedPointer(WrappedValue):
     def cast(self, type_):
         return WrappedPointer(self._gdbval.cast(type_))
 
-
-if sizeof_ptr == 4:
-    def fmt_addr(addr):
-        return '0x%08x' % addr
-else:
-    # Assume 64-bit:
-    def fmt_addr(addr):
-        return '0x%016x' % addr
 
 def fmt_size(size):
     '''

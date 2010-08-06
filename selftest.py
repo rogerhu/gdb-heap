@@ -643,5 +643,29 @@ public:
                           [('Kind', 'pool_header overhead'),
                            ('Domain', 'pyarena')])
 
+
+from heap.parser import parse_query, Comparison, And
+class QueryParsingTests(unittest.TestCase):
+    def assertParsesTo(self, s, result):
+        self.assertEquals(parse_query(s), result)
+
+    def test_simple_comparisons(self):
+        self.assertParsesTo('size >= 1024',
+                            Comparison('size', '>=', 1024L))
+        self.assertParsesTo('addr > 0xbf70ffff',
+                            Comparison('addr', '>', 0xbf70ffff))
+
+        self.assertParsesTo('kind == "str"',
+                            Comparison('kind', '==', 'str'))
+
+        self.assertParsesTo('kind == "str" and size > 1024',
+                            And(Comparison('kind', '==', 'str'),
+                                Comparison('size', '>', 1024L)))
+
+        # Do we want algebraic support?
+        #self.assertParsesTo('size == (256 * 1024)+8',
+        #                    Comparison('size', '==', 1024L))
+
+
 if __name__ == "__main__":
     unittest.main()
