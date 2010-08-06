@@ -14,6 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import sys
+
+import gdb
+
 class UsageFilter(object):
     def matches(self, u):
         raise NotImplementedError
@@ -34,11 +38,91 @@ class AttrFilter(UsageFilter):
         self.attrname = attrname
         self.value = value
 
-class AttrEquals(AttrFilter):
     def matches(self, u):
         if self.attrname == 'category':
             if u.category == None:
                 u.ensure_category()
         actual_value = getattr(u, self.attrname)
-        return actual_value == self.value
+        return self._do_match(actual_value)
 
+    def _do_match(self, actual):
+        raise NotImplementedError
+
+class AttrGt(AttrFilter):
+    def _do_match(self, actual):
+        return actual >= self.value
+
+class Column(object):
+    def __init__(self, name, getter, formatter):
+        self.name = name
+        self.getter = getter
+        self.formatter = formatter
+
+
+class Query(object):
+    def __init__(self, filter_):
+        self.filter_ = filter_
+
+    def __iter__(self):
+        from heap import iter_usage
+        for u in iter_usage():
+            if self.filter_.matches(u):
+                yield u
+
+
+def do_query(args):
+    from heap import fmt_addr, Table
+
+    print repr(args)
+
+    # FIXME: implement a real parser
+    filter_ = AttrGt('size', 10000)
+
+    columns = [Column('Start',
+                      lambda u: u.start,
+                      fmt_addr),
+               Column('End',
+                      lambda u: u.start + u.size - 1,
+                      fmt_addr
+                      ),
+               Column('Domain',
+                      lambda u: u.category.domain,
+                      None),
+               Column('Kind',
+                      lambda u: u.category.kind,
+                      None),
+               Column('Detail',
+                      lambda u: u.category.detail,
+                      None),
+               Column('Hexdump',
+                      lambda u: u.hexdump,
+                      None),
+               ]
+               
+    t = Table([col.name for col in columns])
+
+    for u in Query(filter_):
+        u.ensure_hexdump()
+        u.ensure_category()
+
+        if u.category:
+            domain = u.category.domain
+            kind = u.category.kind
+            detail = u.category.detail
+            if not detail:
+                detail = ''        
+        else:
+            domain = ''
+            kind = ''
+            detail = ''
+
+        t.add_row([fmt_addr(u.start),
+                   fmt_addr(u.start + u.size - 1),
+                   domain,
+                   kind,
+                   detail,
+                   u.hd])
+
+    t.write(sys.stdout)
+    
+    

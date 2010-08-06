@@ -236,6 +236,18 @@ class HeapDiff(gdb.Command):
         print
         print '\n'.join(['  ' + line for line in d.as_changes().splitlines()])
 
+class HeapSelect(gdb.Command):
+    'Query used heap chunks'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap select",
+                              gdb.COMMAND_DATA)
+
+    @need_debuginfo
+    def invoke(self, args, from_tty):
+        from heap.query import do_query
+        do_query(args)
+
 class Hexdump(gdb.Command):
     'Print a hexdump, starting at the specific region of memory'
     def __init__(self):
@@ -267,6 +279,7 @@ def register_commands():
     HeapLog()
     HeapLabel()
     HeapDiff()
+    HeapSelect()
 
     Hexdump()
 
