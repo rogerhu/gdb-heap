@@ -138,12 +138,16 @@ class ColumnNotFound(Exception):
     def __init__(self, colname):
         self.colname = colname
 
+def indent(str_):
+    return '\n'.join([(' ' * 4) + line
+                      for line in str_.splitlines()])
+
 class RowNotFound(Exception):
     def __init__(self, criteria, table):
         self.criteria = criteria
         self.table = table
     def __str__(self):
-        return 'RowNotFound(%s) in:%s' % (self.criteria, self.table)
+        return 'RowNotFound(%s) in:\n%s' % (self.criteria, indent(str(self.table)))
 
 class Criteria(object):
     '''A list of (colname, value) criteria for searching rows in a table'''
@@ -199,7 +203,7 @@ class ParsedTable(object):
                 break
             self.rows.append(self._split_cells(line))
 
-        self.rawdata = '\n'.join(lines[header_index:len(self.rows)+2])
+        self.rawdata = '\n'.join(lines[header_index:header_index+len(self.rows)+2])
 
     def __str__(self):
         return self.rawdata
@@ -271,12 +275,22 @@ uncategorized                         6152 bytes     10          61,520
                                            TOTAL  9,377         857,592
 
 another junk line
+
+another table
+
+Chunk size  Num chunks  Allocated size
+----------  ----------  --------------
+        16         100           1,600
+        24          50           1,200
+    TOTALS         150           2,800
+
+more junk
 '''
 
 class ParserTests(unittest.TestCase):
-    def test_table1(self):
+    def test_table_data(self):
         tables = ParsedTable.parse_lines(test_table)
-        self.assertEquals(len(tables), 1)
+        self.assertEquals(len(tables), 2)
         pt = tables[0]
 
         # Verify column names:
@@ -299,9 +313,21 @@ class ParserTests(unittest.TestCase):
         self.assertRaises(RowNotFound,
                           pt.find_row, [('Count', -1)])
 
+        # Verify that "rawdata" contains the correct string data:
+        self.assert_(pt.rawdata.startswith('       Domain'))
+        self.assert_(pt.rawdata.endswith('857,592'))
+
+        # Test the second table:
+        pt = tables[1]
+        self.assertEquals(pt.colnames, ('Chunk size', 'Num chunks', 'Allocated size'))
+        self.assertEquals(pt.get_cell(2, 2), 2800)
+        self.assert_(pt.rawdata.startswith('Chunk size'))
+        self.assert_(pt.rawdata.endswith('2,800'))
+
+
     def test_multiple_tables(self):
         tables = ParsedTable.parse_lines(test_table * 5)
-        self.assertEquals(len(tables), 5)
+        self.assertEquals(len(tables), 10)
 
 class DebuggerTests(unittest.TestCase):
 
@@ -522,6 +548,8 @@ Chunk size  Num chunks  Allocated size
         # FIXME: do some verification at each breakpoint: check that the reported values correspond to what we expect
 
     def test_cplusplus(self):
+        '''Verify that we can detect and categorize instances of C++ classes'''
+        # Note that C++ detection is currently disabled due to a bug in execution capture
         src = TestSource()
         src.decls += '''
 class Foo {
@@ -534,18 +562,33 @@ class Bar : Foo {
 public:
     virtual ~Bar() {}
     int f1;
-    int f2;
+    // Ensure that Bar has a different allocated size to Foo, on every arch:
+    int buffer[256];
 };
 '''
         for i in range(100):
             src.operations += '{Foo *f = new Foo();}\n'
-            src.operations += '{Bar *b = new Bar();}\n'
+            if i % 2:
+                src.operations += '{Bar *b = new Bar();}\n'
         src.add_breakpoint()
         source = src.as_c_source()
 
         out = self.program_test('test_cplusplus', source, is_cplusplus=True, commands=['run',  'heap sizes', 'heap'])
-        # FIXME: add some verifications
-        #print out
+        tables = ParsedTable.parse_lines(out)
+        heap_sizes_out = tables[0]
+        heap_out = tables[1]
+
+        # We ought to have 150 live blocks on the heap:
+        self.assertHasRow(heap_out,
+                          [('Detail', 'TOTAL'), ('Count', 150)])
+
+        # Use the differing counts of the blocks to locate the objects
+        # FIXME: change the "Domain" values below and add "Kind" once C++
+        # indentification is re-enabled:
+        self.assertHasRow(heap_out,
+                          [('Count', 100), ('Domain', 'uncategorized')])
+        self.assertHasRow(heap_out,
+                          [('Count', 50),  ('Domain', 'uncategorized')])
 
     def test_history(self):
         src = TestSource()
@@ -568,8 +611,8 @@ public:
 
 
     def assertHasRow(self, table, kvs):
-        table.find_row(kvs)
-        # ...which will raise a RowNotFound exception
+        return table.find_row(kvs)
+        # ...which will raise a RowNotFound exception if there's a problem
 
     def test_python(self):
         out = self.command_test(['python', '-c', 'id(42)'],
