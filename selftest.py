@@ -590,7 +590,7 @@ public:
 
         # Use the differing counts of the blocks to locate the objects
         # FIXME: change the "Domain" values below and add "Kind" once C++
-        # indentification is re-enabled:
+        # identification is re-enabled:
         self.assertHasRow(heap_out,
                           [('Count', 100), ('Domain', 'uncategorized')])
         self.assertHasRow(heap_out,
@@ -681,7 +681,7 @@ public:
         src.add_breakpoint()
         source = src.as_c_source()
 
-        out = self.program_test('test_large_allocations', source,
+        out = self.program_test('test_select_by_size', source,
                                 commands=['run',
                                           'heap',
 
