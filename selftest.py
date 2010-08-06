@@ -670,6 +670,33 @@ public:
         self.assertEquals(len(select_out.rows), 3)
 
 
+        # Test that syntax errors are well handled:
+        out = self.program_test('test_select', source,
+                                commands=['run',
+                                          'heap select I AM A SYNTAX ERROR',
+                                          ])
+        errmsg = '''
+Parse error at "AM":
+I AM A SYNTAX ERROR
+  ^^
+'''
+        if errmsg not in out:
+            self.fail('Did not find expected "ParseError" message in:\n%s' % out)
+
+        # Test that unknown attributes are well-handled:
+        out = self.program_test('test_select', source,
+                                commands=['run',
+                                          'heap select NOT_AN_ATTRIBUTE > 42',
+                                          ])
+        errmsg = '''
+Unknown attribute "NOT_AN_ATTRIBUTE" (supported are domain,kind,detail,addr,start,size) at "NOT_AN_ATTRIBUTE":
+NOT_AN_ATTRIBUTE > 42
+  ^^^^^^^^^^^^^^^^
+'''
+        if errmsg not in out:
+            self.fail('Did not find expected "Unknown attribute" error message in:\n%s' % out)
+
+
     def test_select_by_size(self):
         src = TestSource()
         # Allocate ten 1kb blocks, nine 2kb blocks, etc, down to one 10kb

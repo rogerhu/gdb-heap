@@ -135,20 +135,43 @@ def p_expression_group(t):
 
 def p_expression_name(t):
     'expression : ID'
-    t[0] = GetAttr(t[1])
+    attrname = t[1]
+    attrnames = ('domain', 'kind', 'detail', 'addr', 'start', 'size')
+    if attrname not in attrnames:
+        raise ParserError.from_production(t, attrname,
+                                          ('Unknown attribute "%s" (supported are %s)'
+                                           % (attrname, ','.join(attrnames))))
+    t[0] = GetAttr(attrname)
  
 class ParserError(Exception):
-    def __init__(self, input_, pos, value):
+    @classmethod
+    def from_production(cls, p, val, msg):
+        return ParserError(p.lexer.lexdata,
+                           p.lexer.lexpos - len(val),
+                           val,
+                           msg)
+
+    @classmethod
+    def from_token(cls, t, msg="Parse error"):
+        return ParserError(t.lexer.lexdata,
+                           t.lexer.lexpos - len(t.value),
+                           t.value,
+                           msg)
+
+    def __init__(self, input_, pos, value, msg):
         self.input_ = input_
         self.pos = pos
         self.value = value
+        self.msg = msg
     
     def __str__(self):
-        return ('Parse error at "%s":\n%s\n%s'
-                % (self.value, self.input_, ' '*self.pos + '^'*len(self.value)))
+        return ('%s at "%s":\n%s\n%s'
+                % (self.msg, self.value,
+                   self.input_,
+                   ' '*self.pos + '^'*len(self.value)))
 
 def p_error(t):
-    raise ParserError(t.lexer.lexdata, t.lexer.lexpos - len(t.value), t.value)
+    raise ParserError.from_token(t)
 
 
 ############################################################################

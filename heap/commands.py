@@ -246,7 +246,11 @@ class HeapSelect(gdb.Command):
     @need_debuginfo
     def invoke(self, args, from_tty):
         from heap.query import do_query
-        do_query(args)
+        from heap.parser import ParserError
+        try:
+            do_query(args)
+        except ParserError, e:
+            print e
 
 class Hexdump(gdb.Command):
     'Print a hexdump, starting at the specific region of memory'
