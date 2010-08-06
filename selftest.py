@@ -408,16 +408,16 @@ public:
                                 breakpoint='builtin_id')
         
         # Ensure that the code detected instances of various python types we expect to be present:
-        self.assert_('python str' in out)
-        self.assert_('python tuple' in out)
-        self.assert_('python dict' in out)
-        self.assert_('python code' in out)
-        self.assert_('python function' in out)
-        self.assert_('python list' in out)
+        self.assert_('str' in out)
+        self.assert_('tuple' in out)
+        self.assert_('dict' in out)
+        self.assert_('code' in out)
+        self.assert_('function' in out)
+        self.assert_('list' in out)
 
         # and of other types:
         self.assert_('string data' in out)
-        self.assert_('python pool_header overhead' in out)
+        self.assert_('pool_header overhead' in out)
 
         # Re-enable this for debugging:
         # print out
