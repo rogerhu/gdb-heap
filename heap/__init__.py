@@ -384,13 +384,6 @@ class PythonCategorizer(object):
                                         Category('cpython', 'PyUnicodeObject buffer', None))
             return True
 
-        elif c.kind == 'dict':
-            dict_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyDictObject_ptr)
-            ma_table = long(dict_ptr['ma_table'])
-            usage_set.set_addr_category(ma_table,
-                                        Category('cpython', 'PyDictEntry table', None))
-            return True
-
         if c.kind == 'code':
             # Python 2.6's PyCode_Type doesn't have Py_TPFLAGS_HAVE_GC:
             code_ptr = gdb.Value(u.start).cast(self._type_PyCodeObject_ptr)
