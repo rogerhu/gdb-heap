@@ -659,6 +659,12 @@ public:
                            ('Kind',   'dict'),
                            ('Detail', 'ABCMeta.__dict__')])
 
+        # and that its PyDictEntry buffers were also marked with the typename:
+        self.assertHasRow(heap_out,
+                          [('Domain', 'cpython'),
+                           ('Kind',   'PyDictEntry table'),
+                           ('Detail', 'ABCMeta.__dict__')])
+
         # Ensure that the code detected buffers used by python types:
         for kind in ('PyDictEntry table', 'PyListObject ob_item table',
                      'PySetObject setentry table',

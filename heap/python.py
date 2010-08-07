@@ -200,6 +200,16 @@ class PyPoolPtr(WrappedPointer):
 
 Py_TPFLAGS_HEAPTYPE = (1L << 9)
 
+Py_TPFLAGS_INT_SUBCLASS      = (1L << 23)
+Py_TPFLAGS_LONG_SUBCLASS     = (1L << 24)
+Py_TPFLAGS_LIST_SUBCLASS     = (1L << 25)
+Py_TPFLAGS_TUPLE_SUBCLASS    = (1L << 26)
+Py_TPFLAGS_STRING_SUBCLASS   = (1L << 27)
+Py_TPFLAGS_UNICODE_SUBCLASS  = (1L << 28)
+Py_TPFLAGS_DICT_SUBCLASS     = (1L << 29)
+Py_TPFLAGS_BASE_EXC_SUBCLASS = (1L << 30)
+Py_TPFLAGS_TYPE_SUBCLASS     = (1L << 31)
+
 class PyObjectPtr(WrappedPointer):
     @classmethod
     def from_pyobject_ptr(cls, addr):
@@ -207,6 +217,10 @@ class PyObjectPtr(WrappedPointer):
         tp_flags = ob_type['tp_flags']
         if tp_flags & Py_TPFLAGS_HEAPTYPE:
             return HeapTypeObjectPtr(addr)
+
+        if tp_flags & Py_TPFLAGS_DICT_SUBCLASS:
+            return PyDictObjectPtr(addr.cast(gdb.lookup_type('PyDictObject').pointer()))
+
         return PyObjectPtr(addr)
 
     def type(self):
@@ -219,7 +233,7 @@ class PyObjectPtr(WrappedPointer):
             # Can't even read the object at all?
             return 'unknown'
 
-    def categorize_refs(self, usage_set):
+    def categorize_refs(self, usage_set, level=0, detail=None):
         # do nothing by default:
         pass
 
@@ -243,20 +257,39 @@ def _PyObject_VAR_SIZE(typeobj, nitems):
 def int_from_int(gdbval):
     return int(gdbval)
 
+class PyDictObjectPtr(PyObjectPtr):
+    """
+    Class wrapping a gdb.Value that's a PyDictObject* i.e. a dict instance
+    within the process being debugged.
+    """
+    _typename = 'PyDictObject'
+
+    def categorize_refs(self, usage_set, level=0, detail=None):
+        ma_table = long(self.field('ma_table'))
+        usage_set.set_addr_category(ma_table,
+                                    Category('cpython', 'PyDictEntry table', detail),
+                                    level)
+        return True
+
 class PyTypeObjectPtr(PyObjectPtr):
     _typename = 'PyTypeObject'
 
 class HeapTypeObjectPtr(PyObjectPtr):
     _typename = 'PyObject'
 
-    def categorize_refs(self, usage_set):
+    def categorize_refs(self, usage_set, level=0, detail=None):
         attr_dict = self.get_attr_dict()
         if attr_dict:
             # Mark the dictionary's "detail" with our typename
             # gdb.execute('print (PyObject*)0x%x' % long(attr_dict._gdbval))
             usage_set.set_addr_category(obj_addr_to_gc_addr(attr_dict._gdbval),
                                         Category('python', 'dict', '%s.__dict__' % self.safe_tp_name()),
-                                        level=1, debug=True)
+                                        level=level+1)
+
+            # and mark the dict's PyDictEntry with our typename:
+            attr_dict.categorize_refs(usage_set, level=level+1,
+                                      detail='%s.__dict__' % self.safe_tp_name())
+        return True
 
     def get_attr_dict(self):
         '''

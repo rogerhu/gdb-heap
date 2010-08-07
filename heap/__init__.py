@@ -314,7 +314,7 @@ class UsageSet(object):
 
         if addr in self.usage_by_address:
             if debug:
-                print 'addr 0x%x found (for category %r)' % (addr, category)
+                print 'addr 0x%x found (for category %r, level=%i)' % (addr, category, level)
             u = self.usage_by_address[addr]
             # Bail if we already have a more detailed categorization for the
             # address:
@@ -363,14 +363,7 @@ class PythonCategorizer(object):
             if u.obj.categorize_refs(usage_set):
                 return True
 
-        if c.kind == 'dict':
-            dict_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyDictObject_ptr)
-            ma_table = long(dict_ptr['ma_table'])
-            usage_set.set_addr_category(ma_table,
-                                        Category('cpython', 'PyDictEntry table', None))
-            return True
-
-        elif c.kind == 'list':
+        if c.kind == 'list':
             list_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyListObject_ptr)
             ob_item = long(list_ptr['ob_item'])
             usage_set.set_addr_category(ob_item,
