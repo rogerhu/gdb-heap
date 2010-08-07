@@ -653,6 +653,12 @@ public:
                           [('Domain', 'python'),
                            ('Kind', 'str'), ('Detail', 'bytecode')])
 
+        # Ensure that new-style classes have their __dict__ (if any) marked:
+        self.assertHasRow(heap_out,
+                          [('Domain', 'python'),
+                           ('Kind',   'dict'),
+                           ('Detail', 'ABCMeta.__dict__')])
+
         # Ensure that the code detected buffers used by python types:
         for kind in ('PyDictEntry table', 'PyListObject ob_item table',
                      'PySetObject setentry table',

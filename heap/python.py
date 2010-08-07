@@ -2,7 +2,11 @@
 This file is licensed under the PSF license
 '''
 import gdb
-from heap import WrappedPointer, caching_lookup_type, Usage, type_void_ptr, fmt_addr, Category
+from heap import WrappedPointer, caching_lookup_type, Usage, \
+    type_void_ptr, fmt_addr, Category
+
+type_size_t = gdb.lookup_type('size_t')
+SIZEOF_VOID_P = type_void_ptr.sizeof
 
 # Transliteration from Python's obmalloc.c:
 ALIGNMENT             = 8	
@@ -194,6 +198,97 @@ class PyPoolPtr(WrappedPointer):
             offset += size
 
 
+Py_TPFLAGS_HEAPTYPE = (1L << 9)
+
+class PyObjectPtr(WrappedPointer):
+    @classmethod
+    def from_pyobject_ptr(cls, addr):
+        ob_type = addr['ob_type']
+        tp_flags = ob_type['tp_flags']
+        if tp_flags & Py_TPFLAGS_HEAPTYPE:
+            return HeapTypeObjectPtr(addr)
+        return PyObjectPtr(addr)
+
+    def type(self):
+        return PyTypeObjectPtr(self.field('ob_type'))
+
+    def safe_tp_name(self):
+        try:
+            return self.type().field('tp_name').string()
+        except RuntimeError:
+            # Can't even read the object at all?
+            return 'unknown'
+
+    def categorize_refs(self, usage_set):
+        # do nothing by default:
+        pass
+
+    def as_malloc_addr(self):
+        ob_type = addr['ob_type']
+        tp_flags = ob_type['tp_flags']
+        addr = long(self._gdbval)
+        if tp_flags & Py_TPFLAGS_: # FIXME
+            return obj_addr_to_gc_addr(addr)
+        else:
+            return addr
+
+# Taken from my libpython.py code in python's Tools/gdb/libpython.py
+# FIXME: ideally should share code somehow
+def _PyObject_VAR_SIZE(typeobj, nitems):
+    return ( ( typeobj.field('tp_basicsize') +
+               nitems * typeobj.field('tp_itemsize') +
+               (SIZEOF_VOID_P - 1)
+             ) & ~(SIZEOF_VOID_P - 1)
+           ).cast(type_size_t)
+def int_from_int(gdbval):
+    return int(gdbval)
+
+class PyTypeObjectPtr(PyObjectPtr):
+    _typename = 'PyTypeObject'
+
+class HeapTypeObjectPtr(PyObjectPtr):
+    _typename = 'PyObject'
+
+    def categorize_refs(self, usage_set):
+        attr_dict = self.get_attr_dict()
+        if attr_dict:
+            # Mark the dictionary's "detail" with our typename
+            # gdb.execute('print (PyObject*)0x%x' % long(attr_dict._gdbval))
+            usage_set.set_addr_category(obj_addr_to_gc_addr(attr_dict._gdbval),
+                                        Category('python', 'dict', '%s.__dict__' % self.safe_tp_name()),
+                                        level=1, debug=True)
+
+    def get_attr_dict(self):
+        '''
+        Get the PyDictObject ptr representing the attribute dictionary
+        (or None if there's a problem)
+        '''
+        from heap import type_char_ptr
+        try:
+            typeobj = self.type()
+            dictoffset = int_from_int(typeobj.field('tp_dictoffset'))
+            if dictoffset != 0:
+                if dictoffset < 0:
+                    type_PyVarObject_ptr = gdb.lookup_type('PyVarObject').pointer()
+                    tsize = int_from_int(self._gdbval.cast(type_PyVarObject_ptr)['ob_size'])
+                    if tsize < 0:
+                        tsize = -tsize
+                    size = _PyObject_VAR_SIZE(typeobj, tsize)
+                    dictoffset += size
+                    assert dictoffset > 0
+                    assert dictoffset % SIZEOF_VOID_P == 0
+
+                dictptr = self._gdbval.cast(type_char_ptr) + dictoffset
+                PyObjectPtrPtr = gdb.lookup_type('PyObject').pointer().pointer()
+                dictptr = dictptr.cast(PyObjectPtrPtr)
+                return PyObjectPtr.from_pyobject_ptr(dictptr.dereference())
+        except RuntimeError:
+            # Corrupt data somewhere; fail safe
+            pass
+
+        # Not found, or some kind of error:
+        return None
+
 def is_pyobject_ptr(addr):
     try:
         _type_pyop = caching_lookup_type('PyObject').pointer()
@@ -210,7 +305,7 @@ def is_pyobject_ptr(addr):
                 type_refcnt = obtype['ob_refcnt']
                 if type_refcnt > 0 and type_refcnt < 0xffff:
                     # Then this looks like a Python object:
-                    return WrappedPointer(pyop)
+                    return PyObjectPtr.from_pyobject_ptr(pyop)
     except RuntimeError:
         pass # Not a python object (or corrupt)
     

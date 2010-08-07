@@ -27,7 +27,6 @@ try:
     type_void_ptr = gdb.lookup_type('void').pointer()
     type_char_ptr = gdb.lookup_type('char').pointer()
     type_unsigned_char_ptr = gdb.lookup_type('unsigned char').pointer()
-
     sizeof_ptr = type_void_ptr.sizeof
 
     if sizeof_ptr == 4:
@@ -185,9 +184,9 @@ class Category(namedtuple('Category', ('domain', 'kind', 'detail'))):
 
 class Usage(object):
     # Information about an in-use area of memory
-    slots = ('start', 'size', 'category', 'level', 'hd')
+    slots = ('start', 'size', 'category', 'level', 'hd', 'obj')
 
-    def __init__(self, start, size, category=None, level=None, hd=None):
+    def __init__(self, start, size, category=None, level=None, hd=None, obj=None):
         assert isinstance(start, long)
         assert isinstance(size, long)
         if category:
@@ -197,6 +196,7 @@ class Usage(object):
         self.category = category
         self.level = level
         self.hd = hd
+        self.obj=obj
         
     def __repr__(self):
         result = 'Usage(%s, %s' % (hex(self.start), hex(self.size))
@@ -204,11 +204,13 @@ class Usage(object):
             result += ', %r' % (self.category, )
         if self.hd:
             result += ', hd=%r' % self.hd
+        if self.obj:
+            result += ', obj=%r' % self.obj
         return result + ')'
 
     def ensure_category(self, usage_set=None):
         if self.category is None:
-            self.category = categorize(self.start, self.size, usage_set)
+            self.category = categorize(self, usage_set)
 
     def ensure_hexdump(self):
         if self.hd is None:
@@ -357,6 +359,10 @@ class PythonCategorizer(object):
         c = u.category
         if c.domain != 'python':
             return False
+        if u.obj:
+            if u.obj.categorize_refs(usage_set):
+                return True
+
         if c.kind == 'dict':
             dict_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyDictObject_ptr)
             ma_table = long(dict_ptr['ma_table'])
@@ -467,13 +473,15 @@ def categorize_usage_list(usage_list):
 
 
 
-def categorize(addr, size, usage_set):
+def categorize(u, usage_set):
     '''Given an in-use block, try to guess what it's being used for
     If usage_set is provided, this categorization may lead to further
     categorizations'''
     from heap.python import as_python_object, obj_addr_to_gc_addr
+    addr, size = u.start, u.size
     pyop = as_python_object(addr)
     if pyop:
+        u.obj = pyop
         try:
             ob_type = WrappedPointer(pyop.field('ob_type'))
             tp_name = ob_type.field('tp_name').string()
