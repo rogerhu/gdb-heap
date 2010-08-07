@@ -353,35 +353,45 @@ class PythonCategorizer(object):
     def categorize(self, u, usage_set):
         '''Try to categorize a Usage instance within an UsageSet (which could
         lead to further categorization)'''
-        if u.category == 'python dict':
+        c = u.category
+        if c.domain != 'python':
+            return False
+        if c.kind == 'dict':
             dict_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyDictObject_ptr)
             ma_table = long(dict_ptr['ma_table'])
             usage_set.set_addr_category(ma_table,
                                         Category('cpython', 'PyDictEntry table', None))
             return True
 
-        elif u.category == 'python list':
+        elif c.kind == 'list':
             list_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyListObject_ptr)
             ob_item = long(list_ptr['ob_item'])
             usage_set.set_addr_category(ob_item,
                                         Category('cpython', 'PyListObject ob_item table', None))
             return True
 
-        elif u.category == 'python set':
+        elif c.kind == 'set':
             set_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PySetObject_ptr)
             table = long(set_ptr['table'])
             usage_set.set_addr_category(table,
                                         Category('cpython', 'PySetObject setentry table', None))
             return True
 
-        elif u.category == 'python unicode':
+        elif c.kind == 'unicode':
             unicode_ptr = gdb.Value(u.start).cast(self._type_PyUnicodeObject_ptr)
             m_str = long(unicode_ptr['str'])
             usage_set.set_addr_category(m_str,
                                         Category('cpython', 'PyUnicodeObject buffer', None))
             return True
 
-        elif u.category == 'python sqlite3.Statement':
+        elif c.kind == 'dict':
+            dict_ptr = gdb.Value(u.start + self._type_PyGC_Head.sizeof).cast(self._type_PyDictObject_ptr)
+            ma_table = long(dict_ptr['ma_table'])
+            usage_set.set_addr_category(ma_table,
+                                        Category('cpython', 'PyDictEntry table', None))
+            return True
+
+        elif c.kind == 'sqlite3.Statement':
             ptr_type = caching_lookup_type('pysqlite_Statement').pointer()
             obj_ptr = gdb.Value(u.start).cast(ptr_type)
             #print obj_ptr.dereference()
@@ -401,7 +411,7 @@ class PythonCategorizer(object):
                         fn(field_ptr, usage_set, set())
             return True
 
-        elif u.category == 'python rpm.hdr':
+        elif c.kind == 'rpm.hdr':
             ptr_type = caching_lookup_type('struct hdrObject_s').pointer()
             if ptr_type:
                 obj_ptr = gdb.Value(u.start).cast(ptr_type)
@@ -411,7 +421,7 @@ class PythonCategorizer(object):
                     blob = h['blob']
                     usage_set.set_addr_category(long(blob), Category('rpm', 'Header blob', None))
 
-        elif u.category == 'python rpm.mi':
+        elif c.kind == 'rpm.mi':
             ptr_type = caching_lookup_type('struct rpmmiObject_s').pointer()
             if ptr_type:
                 obj_ptr = gdb.Value(u.start).cast(ptr_type)

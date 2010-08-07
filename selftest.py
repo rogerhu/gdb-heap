@@ -621,7 +621,14 @@ public:
         # ...which will raise a RowNotFound exception if there's a problem
 
     def test_python(self):
-        out = self.command_test(['python', '-c', 'id(42)'],
+        # Test that we can debug CPython's memory usage
+
+        # Invoke python, stopping at a breakpoint
+
+        # Ensure that we have a set object that uses an externally allocated
+        # buffer, so that we can verify that these are detected.  To do this,
+        # we need a set with more than PySet_MINSIZE members (which is 8):
+        out = self.command_test(['python', '-c', 'a = set(range(64)); id(42)'],
                                 commands=['set breakpoint pending yes',
                                           'break builtin_id', 
                                           'run', 
@@ -636,10 +643,19 @@ public:
         heap_sizes_out = tables[0]
         heap_out = tables[1]
         
-        # Ensure that the code detected instances of various python types we expect to be present:
-        for kind in ('str', 'tuple', 'dict', 'code', 'function', 'list'):
+        # Ensure that the code detected instances of various python types we
+        # expect to be present:
+        for kind in ('str', 'unicode', 'list', 'tuple', 'dict', 'type', 'code',
+                     'set', 'frozenset', 'function', 'module', 'frame', ):
             self.assertHasRow(heap_out, 
                               [('Kind', kind), ('Domain', 'python')])
+
+        # Ensure that the code detected buffers used by python types:
+        for kind in ('PyDictEntry table', 'PyListObject ob_item table',
+                     'PySetObject setentry table',
+                     'PyUnicodeObject buffer', 'PyDictEntry table'):
+            self.assertHasRow(heap_out,
+                              [('Kind', kind), ('Domain', 'cpython')])
 
         # and of other types:
         self.assertHasRow(heap_out,
