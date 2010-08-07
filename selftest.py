@@ -630,9 +630,8 @@ public:
         # we need a set with more than PySet_MINSIZE members (which is 8):
         out = self.command_test(['python', '-c', 'a = set(range(64)); id(42)'],
                                 commands=['set breakpoint pending yes',
-                                          'break builtin_id', 
-                                          'run', 
-                                          'heap sizes',
+                                          'break builtin_id',
+                                          'run',
                                           'heap'],
                                 breakpoint='builtin_id')
 
@@ -640,15 +639,19 @@ public:
         # print out
 
         tables = ParsedTable.parse_lines(out)
-        heap_sizes_out = tables[0]
-        heap_out = tables[1]
+        heap_out = tables[0]
         
         # Ensure that the code detected instances of various python types we
         # expect to be present:
         for kind in ('str', 'unicode', 'list', 'tuple', 'dict', 'type', 'code',
                      'set', 'frozenset', 'function', 'module', 'frame', ):
-            self.assertHasRow(heap_out, 
+            self.assertHasRow(heap_out,
                               [('Kind', kind), ('Domain', 'python')])
+
+        # Ensure that bytecode "strings" are marked as such:
+        self.assertHasRow(heap_out,
+                          [('Domain', 'python'),
+                           ('Kind', 'str'), ('Detail', 'bytecode')])
 
         # Ensure that the code detected buffers used by python types:
         for kind in ('PyDictEntry table', 'PyListObject ob_item table',

@@ -340,6 +340,7 @@ class PythonCategorizer(object):
         self._type_PyListObject_ptr = caching_lookup_type('PyListObject').pointer()
         self._type_PySetObject_ptr = caching_lookup_type('PySetObject').pointer()
         self._type_PyUnicodeObject_ptr = caching_lookup_type('PyUnicodeObject').pointer()
+        self._type_PyCodeObject_ptr = caching_lookup_type('PyCodeObject').pointer()
         self._type_PyGC_Head = caching_lookup_type('PyGC_Head')
 
     @classmethod
@@ -391,6 +392,14 @@ class PythonCategorizer(object):
                                         Category('cpython', 'PyDictEntry table', None))
             return True
 
+        if c.kind == 'code':
+            # Python 2.6's PyCode_Type doesn't have Py_TPFLAGS_HAVE_GC:
+            code_ptr = gdb.Value(u.start).cast(self._type_PyCodeObject_ptr)
+            co_code =  long(code_ptr['co_code'])
+            usage_set.set_addr_category(co_code,
+                                        Category('python', 'str', 'bytecode'),
+                                        level=1)
+            return True
         elif c.kind == 'sqlite3.Statement':
             ptr_type = caching_lookup_type('pysqlite_Statement').pointer()
             obj_ptr = gdb.Value(u.start).cast(ptr_type)
