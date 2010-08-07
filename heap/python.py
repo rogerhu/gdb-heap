@@ -348,51 +348,6 @@ def as_python_object(addr):
                 return pyop
     # Doesn't look like a python object, implicit return None
 
-def python_arena_spelunking():
-    # See Python's Objects/obmalloc.c
-    from heap.glibc import get_ms
-    from heap import categorize
-    ms = get_ms()
-    for i, chunk in enumerate(ms.iter_mmap_chunks()):
-        if chunk.chunksize() == 266240: #FIXME: 256 * 1024 is 262144 so we're 4100 bytes out (not including chunk overhead)
-            print chunk
-            # Hopefully we have a python arena's memory
-            # Divided into 64 pools of 4k each
-            arena_addr = chunk.as_mem()
-            print '0x%x' % arena_addr
-
-            arena = PyArenaPtr.from_addr(arena_addr)
-
-            for pool in arena.iter_pools():
-                print pool
-
-                print pool._gdbval.dereference()
-                #print Pygdb.Value(pool_addr).cast(caching_lookup_type('poolp')).dereference()
-
-                print 'block_size:', pool.block_size()
-                #for start, size in pool.iter_blocks():
-                #    # is it possible to determine if a block is free/in-use at this level?
-                #    # when freed, blocks get added to the head of a per-pool singly-linked list, and so the first sizeof(block*) bytes of such a block are a block* to the next free block in this pool
-                #    hd = hexdump_as_long(start, size/8) # FIXME
-                #    print '0x%x-0x%x: %s %s' % (start, start+size-1, hd)
-
-                #print 'free blocks:'
-                #for start, size in pool.iter_free_blocks():
-                #    hd = hexdump_as_long(start, size/8) # FIXME
-                #    print '0x%x-0x%x: %s' % (start, start+size-1, hd)
-
-                #print
-                print 'used blocks:'
-                for start, size in pool.iter_used_blocks():
-                    hd = hexdump_as_long(start, size/8) # FIXME
-                    print '0x%x-0x%x: %s' % (start, start+size-1, hd)
-                    
-                    pyop = as_python_object(start)
-                    if pyop:
-                        print pyop._gdbval
-                        # group by type?
-                    print categorize(start, size, None)
-                        
 class ArenaObject(WrappedPointer):
     '''
     Wrapper around Python's struct arena_object*
