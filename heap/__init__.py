@@ -397,8 +397,8 @@ class PythonCategorizer(object):
             obj_ptr = gdb.Value(u.start).cast(ptr_type)
             #print obj_ptr.dereference()
             from heap.sqlite import categorize_sqlite3
-            for fieldname, category, fn in (('db', 'sqlite3', 
-                                             categorize_sqlite3), ('st', 'sqlite3_stmt', None)):
+            for fieldname, catname, fn in (('db', 'sqlite3', categorize_sqlite3),
+                                           ('st', 'sqlite3_stmt', None)):
                 field_ptr = long(obj_ptr[fieldname])
                 
                 # sqlite's src/mem1.c adds a a sqlite3_int64 (size) to the front
@@ -407,7 +407,7 @@ class PythonCategorizer(object):
                 malloc_ptr = field_ptr - 8
 
                 # print u, fieldname, category, field_ptr
-                if usage_set.set_addr_category(malloc_ptr, category):
+                if usage_set.set_addr_category(malloc_ptr, Category('sqlite3', catname)):
                     if fn:
                         fn(field_ptr, usage_set, set())
             return True

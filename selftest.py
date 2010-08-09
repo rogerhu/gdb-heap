@@ -710,6 +710,20 @@ public:
                            ('Detail', 'interned'),
                            ('Count',  1)])
 
+
+        # Ensure that we detect python sqlite3 objects:
+        for kind in ('sqlite3.Connection', 'sqlite3.Statement',
+                     'sqlite3.Cache'):
+            self.assertHasRow(heap_out,
+                              [('Domain', 'python'),
+                               ('Kind', kind)])
+        # ...and that we detect underlying sqlite3 buffers:
+        for kind in ('sqlite3', 'sqlite3_stmt'):
+            self.assertHasRow(heap_out,
+                              [('Domain', 'sqlite3'),
+                               ('Kind', kind)])
+
+
     def test_select(self):
         # Ensure that "heap select" with no query does something sane
         src = TestSource()

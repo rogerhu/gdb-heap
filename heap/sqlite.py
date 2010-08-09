@@ -14,7 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from gdb.heap import Category, caching_lookup_type
+from heap import Category, caching_lookup_type
+
+import gdb
 
 def categorize_sqlite3(addr, usage_set, visited):
     # "struct sqlite3" is defined in src/sqliteInt.h, which is an internal header

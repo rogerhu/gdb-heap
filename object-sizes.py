@@ -70,7 +70,23 @@ new_style_many = NewStyleManyAttribs(**dict(zip('abcdefghi', range(9))))
 # buffer, so that we can verify that these are detected.  To do this,
 # we need a set with more than PySet_MINSIZE members (which is 8):
 large_set = set(range(64))
-#large_frozenset = frozenset(range(64))
+large_frozenset = frozenset(range(64))
+
+import sqlite3
+db = sqlite3.connect(':memory:')
+c = db.cursor()
+
+# Create table
+c.execute('''CREATE TABLE dummy(foo TEXT, bar TEXT, v REAL)''')
+
+# Insert a row of data
+c.execute("INSERT INTO dummy VALUES ('ostrich', 'elephant', 42.0)")
+
+# Save (commit) the changes
+db.commit()
+
+# Don't close "c"; we want to see the objects in memory
+
 
 # Ensure that the selftest's breakpoint on builtin_id is hit:
 id(42)
