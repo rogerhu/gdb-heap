@@ -54,7 +54,9 @@ def caching_lookup_type(typename):
             return gdbtype
         raise RuntimeError('(cached) Could not find type "%s"' % typename)
     try:
-        gdbtype = gdb.lookup_type(typename)
+        if 0:
+            print 'type cache miss: %r' % typename
+        gdbtype = gdb.lookup_type(typename).strip_typedefs()
     except RuntimeError, e:
         # did not find the type: add a None to the cache
         gdbtype = None
