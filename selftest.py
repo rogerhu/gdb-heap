@@ -623,12 +623,9 @@ public:
     def test_python(self):
         # Test that we can debug CPython's memory usage
 
-        # Invoke python, stopping at a breakpoint
+        # Invoke a test python script, stopping at a breakpoint
 
-        # Ensure that we have a set object that uses an externally allocated
-        # buffer, so that we can verify that these are detected.  To do this,
-        # we need a set with more than PySet_MINSIZE members (which is 8):
-        out = self.command_test(['python', '-c', 'a = set(range(64)); id(42)'],
+        out = self.command_test(['python', 'object-sizes.py'],
                                 commands=['set breakpoint pending yes',
                                           'break builtin_id',
                                           'run',
@@ -655,28 +652,40 @@ public:
 
         # Ensure that old-style classes are printed with a meaningful name
         # (i.e. not just "type"):
-        self.assertHasRow(heap_out,
-                          [('Domain', 'python'),
-                           ('Kind',   "'_Environ'"),
-                           ('Detail', 'old-style')])
+        for clsname in ('OldStyle', 'OldStyleManyAttribs'):
+            self.assertHasRow(heap_out,
+                              [('Domain', 'python'),
+                               ('Kind',   "'%s'" % clsname),
+                               ('Detail', 'old-style')])
 
-        # and that its instance dict is marked:
-        self.assertHasRow(heap_out,
-                          [('Domain', 'cpython'),
-                           ('Kind',   'PyDictObject'),
-                           ('Detail', "'_Environ' -> in_dict")])
+            # ...and that their instance dicts are marked:
+            self.assertHasRow(heap_out,
+                              [('Domain', 'cpython'),
+                               ('Kind',   'PyDictObject'),
+                               ('Detail', "'%s' -> in_dict" % clsname)])
 
-        # Ensure that new-style classes have their __dict__ (if any) marked:
-        self.assertHasRow(heap_out,
-                          [('Domain', 'python'),
-                           ('Kind',   'dict'),
-                           ('Detail', 'ABCMeta.__dict__')])
-
-        # and that its PyDictEntry buffers were also marked with the typename:
+        # ...and that an old-style instance with enough attributes to require a
+        # separate PyDictEntry buffer for its __dict__ has that buffer marked
+        # with the typename:
         self.assertHasRow(heap_out,
                           [('Domain', 'cpython'),
                            ('Kind',   'PyDictEntry table'),
-                           ('Detail', 'ABCMeta.__dict__')])
+                           ('Detail', "'OldStyleManyAttribs' -> in_dict")])
+
+        # Likewise for new-style classes:
+        for clsname in ('NewStyle', 'NewStyleManyAttribs'):
+            self.assertHasRow(heap_out,
+                              [('Domain', 'python'),
+                               ('Kind',   clsname),
+                               ('Detail', None)])
+            self.assertHasRow(heap_out,
+                              [('Domain', 'python'),
+                               ('Kind',   'dict'),
+                               ('Detail', '%s.__dict__' % clsname)])
+        self.assertHasRow(heap_out,
+                          [('Domain', 'cpython'),
+                           ('Kind',   'PyDictEntry table'),
+                           ('Detail', 'NewStyleManyAttribs.__dict__')])
 
         # Ensure that the code detected buffers used by python types:
         for kind in ('PyDictEntry table', 'PyListObject ob_item table',
