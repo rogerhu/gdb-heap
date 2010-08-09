@@ -221,6 +221,11 @@ class PyObjectPtr(WrappedPointer):
         if tp_flags & Py_TPFLAGS_DICT_SUBCLASS:
             return PyDictObjectPtr(addr.cast(gdb.lookup_type('PyDictObject').pointer()))
 
+        tp_name = ob_type['tp_name'].string()
+        if tp_name == 'instance':
+            __type_PyInstanceObjectPtr = caching_lookup_type('PyInstanceObject').pointer()
+            return PyInstanceObjectPtr(addr.cast(__type_PyInstanceObjectPtr))
+
         return PyObjectPtr(addr)
 
     def type(self):
@@ -232,6 +237,11 @@ class PyObjectPtr(WrappedPointer):
         except RuntimeError:
             # Can't even read the object at all?
             return 'unknown'
+
+    def categorize(self):
+        # Python objects will be categorized as ("python", tp_name), but
+        # old-style classes have to do more work
+        return Category('python', self.safe_tp_name())
 
     def categorize_refs(self, usage_set, level=0, detail=None):
         # do nothing by default:
@@ -269,6 +279,46 @@ class PyDictObjectPtr(PyObjectPtr):
         usage_set.set_addr_category(ma_table,
                                     Category('cpython', 'PyDictEntry table', detail),
                                     level)
+        return True
+
+class PyInstanceObjectPtr(PyObjectPtr):
+    _typename = 'PyInstanceObject'
+
+    def cl_name(self):
+        in_class = self.field('in_class')
+        # cl_name is a python string, not a char*; rely on
+        # prettyprinters for now:
+        cl_name = str(in_class['cl_name'])[1:-1]
+        return cl_name
+
+    def categorize(self):
+        return Category('python', self.cl_name(), 'old-style')
+
+    def categorize_refs(self, usage_set, level=0, detail=None):
+        cl_name = self.cl_name()
+        # print 'cl_name', cl_name
+
+        # Visit the in_dict:
+        in_dict = self.field('in_dict')
+        # print 'in_dict', in_dict
+
+        dict_detail = '%s.__dict__' % cl_name
+
+        # Mark the ptr as being a dictionary, adding detail
+        usage_set.set_addr_category(obj_addr_to_gc_addr(in_dict),
+                                    Category('cpython', 'PyDictObject', dict_detail),
+                                    level=1)
+
+        # Visit ma_table:
+        _type_PyDictObject_ptr = caching_lookup_type('PyDictObject').pointer()
+        in_dict = in_dict.cast(_type_PyDictObject_ptr)
+
+        ma_table = long(in_dict['ma_table'])
+
+        # Record details:
+        usage_set.set_addr_category(ma_table,
+                                    Category('cpython', 'PyDictEntry table', dict_detail),
+                                    level=2)
         return True
 
 class PyTypeObjectPtr(PyObjectPtr):

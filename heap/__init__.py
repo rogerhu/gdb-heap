@@ -469,55 +469,11 @@ def categorize(u, usage_set):
     if pyop:
         u.obj = pyop
         try:
-            ob_type = WrappedPointer(pyop.field('ob_type'))
-            tp_name = ob_type.field('tp_name').string()
-            if tp_name == 'instance':
-                #print 'got instance'
-                __type_PyInstanceObject = caching_lookup_type('PyInstanceObject').pointer()
-                #print '__type_PyInstanceObject', __type_PyInstanceObject
-                inst = pyop.cast(__type_PyInstanceObject)
-                #print 'inst', inst
-
-                #print ((PyInstanceObject*)op)->in_dict (mark this as __dict__ of type)
-                in_class = inst.field('in_class')
-
-                # cl_name is a python string, not a char*; rely on
-                # prettyprinters for now:
-                cl_name = str(in_class['cl_name'])[1:-1]
-                cat = Category('python', cl_name, 'old-style')
-
-                # Visit the in_dict:
-                if usage_set:
-                    in_dict = inst.field('in_dict')
-                    #print 'in_dict', in_dict
-
-                    dict_detail = '%s.__dict__' % cl_name
-
-                    # Mark the ptr as being a dictionary, adding detail
-                    usage_set.set_addr_category(obj_addr_to_gc_addr(in_dict),
-                                                Category('cpython', 'PyDictObject', dict_detail),
-                                                level=1)
-
-                    # Visit ma_table:
-                    # FIXME: move this into python-specific code
-                    _type_PyDictObject_ptr = caching_lookup_type('PyDictObject').pointer()
-                    in_dict = in_dict.cast(_type_PyDictObject_ptr)
-
-                    ma_table = long(in_dict['ma_table'])
-
-                    # Record details:
-                    usage_set.set_addr_category(ma_table,
-                                                Category('cpython', 'PyDictEntry table', dict_detail),
-                                                level=2)
-                return cat
-
-            # FIXME: new style classes: should share code with the prettyprinters
-            # print HeapTypeObjectPtr
-
-            return Category('python', str(tp_name))
+            return pyop.categorize()
         except (RuntimeError, UnicodeEncodeError, UnicodeDecodeError):
             # If something went wrong, assume that this wasn't really a python
             # object, and fall through:
+            print "couldn't categorize pyop:" % pyop
             pass
 
     # C++ detection: only enabled if we can capture "execute"; there seems to
