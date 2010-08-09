@@ -653,6 +653,19 @@ public:
                           [('Domain', 'python'),
                            ('Kind', 'str'), ('Detail', 'bytecode')])
 
+        # Ensure that old-style classes are printed with a meaningful name
+        # (i.e. not just "type"):
+        self.assertHasRow(heap_out,
+                          [('Domain', 'python'),
+                           ('Kind',   "'_Environ'"),
+                           ('Detail', 'old-style')])
+
+        # and that its instance dict is marked:
+        self.assertHasRow(heap_out,
+                          [('Domain', 'cpython'),
+                           ('Kind',   'PyDictObject'),
+                           ('Detail', "'_Environ' -> in_dict")])
+
         # Ensure that new-style classes have their __dict__ (if any) marked:
         self.assertHasRow(heap_out,
                           [('Domain', 'python'),
