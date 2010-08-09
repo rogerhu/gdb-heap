@@ -15,7 +15,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import datetime
-from heap import iter_usage, fmt_size, fmt_addr, sign
+from heap import iter_usage_with_progress, fmt_size, fmt_addr, sign
 
 class Snapshot(object):
     '''Snapshot of the state of the heap'''
@@ -35,7 +35,7 @@ class Snapshot(object):
     @classmethod
     def current(cls, name):
         result = cls(name, datetime.datetime.now())
-        for i, u in enumerate(iter_usage()):
+        for i, u in enumerate(iter_usage_with_progress()):
             u.ensure_category()
             u.ensure_hexdump()
             result._add_usage(u)

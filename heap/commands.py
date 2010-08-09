@@ -21,7 +21,7 @@ import sys
 from heap.glibc import get_ms
 from heap.history import history, Snapshot, Diff
 
-from heap import iter_usage, \
+from heap import iter_usage_with_progress, \
     fmt_size, fmt_addr, \
     categorize, categorize_usage_list, \
     hexdump_as_bytes, \
@@ -53,7 +53,7 @@ class Heap(gdb.Command):
         total_size = 0
         total_count = 0
         try:
-            usage_list = list(iter_usage())
+            usage_list = list(iter_usage_with_progress())
             categorize_usage_list(usage_list)
             for u in usage_list:
                 u.ensure_category()

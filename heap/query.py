@@ -135,8 +135,8 @@ class Query(object):
         self.filter_ = filter_
 
     def __iter__(self):
-        from heap import iter_usage
-        for u in iter_usage():
+        from heap import iter_usage_with_progress
+        for u in iter_usage_with_progress():
             if self.filter_.eval_(u):
                 yield u
 

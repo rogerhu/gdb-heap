@@ -448,7 +448,7 @@ def categorize_usage_list(usage_list):
     # Precompute some types, if available:
     pycategorizer = PythonCategorizer.make()
 
-    for u in usage_list:
+    for u in ProgressNotifier(iter(usage_list), 'Blocks analyzed'):
         # Cover the simple cases, where the category can be figured out directly:
         u.ensure_category(usage_set)
 
@@ -546,6 +546,25 @@ def as_nul_terminated_string(addr, size):
     except (RuntimeError, UnicodeDecodeError):
         # Probably not string data:
         return None
+
+class ProgressNotifier(object):
+    '''Wrap an iterable with progress notification to stdout'''
+    def __init__(self, inner, msg):
+        self.inner = inner
+        self.count = 0
+        self.msg = msg
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        self.count += 1
+        if 0 == self.count % 1000:
+            print self.msg, self.count
+        return self.inner.next()
+
+def iter_usage_with_progress():
+    return ProgressNotifier(iter_usage(), 'Blocks retrieved')
 
 def iter_usage():
     # Iterate through glibc, and within that, within Python arena blocks, as appropriate
