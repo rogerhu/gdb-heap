@@ -234,7 +234,7 @@ class PyObjectPtr(WrappedPointer):
     def safe_tp_name(self):
         try:
             return self.type().field('tp_name').string()
-        except RuntimeError:
+        except RuntimeError, UnicodeDecodeError:
             # Can't even read the object at all?
             return 'unknown'
 
@@ -389,7 +389,7 @@ def is_pyobject_ptr(addr):
                 if type_refcnt > 0 and type_refcnt < 0xffff:
                     # Then this looks like a Python object:
                     return PyObjectPtr.from_pyobject_ptr(pyop)
-    except RuntimeError:
+    except (RuntimeError, UnicodeDecodeError):
         pass # Not a python object (or corrupt)
     
     # Doesn't look like a python object, implicit return None
