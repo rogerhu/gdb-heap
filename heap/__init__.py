@@ -457,6 +457,8 @@ def categorize_usage_list(usage_list):
             if pycategorizer.categorize(u, usage_set):
                 continue
 
+    from python import python_categorization
+    python_categorization(usage_set)
 
 
 def categorize(u, usage_set):

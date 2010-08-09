@@ -702,6 +702,14 @@ public:
                           [('Kind', 'pool_header overhead'),
                            ('Domain', 'pyarena')])
 
+        # Ensure that the "interned" table is identified (it's typically
+        # at least 200k on a 64-bit build):
+        self.assertHasRow(heap_out,
+                          [('Domain', 'cpython'),
+                           ('Kind',   'PyDictEntry table'),
+                           ('Detail', 'interned'),
+                           ('Count',  1)])
+
     def test_select(self):
         # Ensure that "heap select" with no query does something sane
         src = TestSource()

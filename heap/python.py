@@ -485,5 +485,20 @@ class ArenaDetection(object):
         return None
 
 
+def python_categorization(usage_set):
+    # special-cased categorization for CPython
+
+    # The Objects/stringobject.c:interned dictionary is typically large,
+    # with its PyDictEntry table occuping 200k on a 64-bit build of python 2.6
+    # Identify it:
+    try:
+        val_interned = gdb.parse_and_eval('interned')
+        pyop = PyDictObjectPtr.from_pyobject_ptr(val_interned)
+        ma_table = long(pyop.field('ma_table'))
+        usage_set.set_addr_category(ma_table,
+                                    Category('cpython', 'PyDictEntry table', 'interned'),
+                                    level=1)
+    except RuntimeError:
+        pass
         
 
