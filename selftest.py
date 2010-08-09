@@ -655,14 +655,14 @@ public:
         for clsname in ('OldStyle', 'OldStyleManyAttribs'):
             self.assertHasRow(heap_out,
                               [('Domain', 'python'),
-                               ('Kind',   "'%s'" % clsname),
+                               ('Kind',   clsname),
                                ('Detail', 'old-style')])
 
             # ...and that their instance dicts are marked:
             self.assertHasRow(heap_out,
                               [('Domain', 'cpython'),
                                ('Kind',   'PyDictObject'),
-                               ('Detail', "'%s' -> in_dict" % clsname)])
+                               ('Detail', '%s.__dict__' % clsname)])
 
         # ...and that an old-style instance with enough attributes to require a
         # separate PyDictEntry buffer for its __dict__ has that buffer marked
@@ -670,7 +670,7 @@ public:
         self.assertHasRow(heap_out,
                           [('Domain', 'cpython'),
                            ('Kind',   'PyDictEntry table'),
-                           ('Detail', "'OldStyleManyAttribs' -> in_dict")])
+                           ('Detail', 'OldStyleManyAttribs.__dict__')])
 
         # Likewise for new-style classes:
         for clsname in ('NewStyle', 'NewStyleManyAttribs'):

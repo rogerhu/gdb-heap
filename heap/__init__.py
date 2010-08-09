@@ -480,9 +480,10 @@ def categorize(u, usage_set):
 
                 #print ((PyInstanceObject*)op)->in_dict (mark this as __dict__ of type)
                 in_class = inst.field('in_class')
-                #print 'in_class', in_class
-                cl_name = str(in_class['cl_name'])
-                #print 'cl_name', cl_name
+
+                # cl_name is a python string, not a char*; rely on
+                # prettyprinters for now:
+                cl_name = str(in_class['cl_name'])[1:-1]
                 cat = Category('python', cl_name, 'old-style')
 
                 # Visit the in_dict:
@@ -490,7 +491,7 @@ def categorize(u, usage_set):
                     in_dict = inst.field('in_dict')
                     #print 'in_dict', in_dict
 
-                    dict_detail = '%s -> in_dict' % cl_name
+                    dict_detail = '%s.__dict__' % cl_name
 
                     # Mark the ptr as being a dictionary, adding detail
                     usage_set.set_addr_category(obj_addr_to_gc_addr(in_dict),
