@@ -518,7 +518,7 @@ class ProgressNotifier(object):
 
     def next(self):
         self.count += 1
-        if 0 == self.count % 1000:
+        if 0 == self.count % 10000:
             print self.msg, self.count
         return self.inner.next()
 
