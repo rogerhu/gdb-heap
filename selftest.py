@@ -771,6 +771,10 @@ NOT_AN_ATTRIBUTE > 42
         if errmsg not in out:
             self.fail('Did not find expected "Unknown attribute" error message in:\n%s' % out)
 
+        # Ensure that ply did not create debug files (ticket #12)
+        for filename in ('parser.out', 'parsetab.py'):
+            if os.path.exists(filename):
+                self.fail('Unexpectedly found file %r' % filename)
 
     def test_select_by_size(self):
         src = TestSource()

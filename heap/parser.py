@@ -181,7 +181,7 @@ def p_error(t):
 # Entry point:
 def parse_query(s):
     #try:
-    parser = yacc.yacc()
+    parser = yacc.yacc(debug=0, write_tables=0)
     return parser.parse(s)#, debug=1)
     #except ParserError, e:
     #    print 'foo', e
