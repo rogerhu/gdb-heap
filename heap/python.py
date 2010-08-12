@@ -424,7 +424,7 @@ def as_python_object(addr):
     else:
         # maybe a GC type:
         _type_PyGC_Head = caching_lookup_type('PyGC_Head')
-        _type_PyGC_Head_ptr = caching_lookup_type('PyGC_Head').pointer()
+        _type_PyGC_Head_ptr = _type_PyGC_Head.pointer()
         gc_ptr = gdb.Value(addr).cast(_type_PyGC_Head_ptr)
         # print gc_ptr.dereference()
         if gc_ptr['gc']['gc_refs'] == -3: #FIXME: need to cover other values
