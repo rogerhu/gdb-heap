@@ -430,7 +430,8 @@ class PythonCategorizer(object):
                 obj_ptr = gdb.Value(u.start).cast(ptr_type)
                 print obj_ptr.dereference()
                 mi = obj_ptr['mi']
-                if usage_set.set_addr_category(long(h), Category('rpm', 'rpmdbMatchIterator', None)):
+                if usage_set.set_addr_category(long(mi),
+                                               Category('rpm', 'rpmdbMatchIterator', None)):
                     pass
                     #blob = h['blob']
                     #usage_set.set_addr_category(long(blob), 'rpm Header blob')
