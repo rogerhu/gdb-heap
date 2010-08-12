@@ -219,7 +219,7 @@ class PyObjectPtr(WrappedPointer):
             return HeapTypeObjectPtr(addr)
 
         if tp_flags & Py_TPFLAGS_DICT_SUBCLASS:
-            return PyDictObjectPtr(addr.cast(gdb.lookup_type('PyDictObject').pointer()))
+            return PyDictObjectPtr(addr.cast(caching_lookup_type('PyDictObject').pointer()))
 
         tp_name = ob_type['tp_name'].string()
         if tp_name == 'instance':
@@ -352,17 +352,19 @@ class HeapTypeObjectPtr(PyObjectPtr):
             dictoffset = int_from_int(typeobj.field('tp_dictoffset'))
             if dictoffset != 0:
                 if dictoffset < 0:
-                    type_PyVarObject_ptr = gdb.lookup_type('PyVarObject').pointer()
+                    type_PyVarObject_ptr = caching_lookup_type('PyVarObject').pointer()
                     tsize = int_from_int(self._gdbval.cast(type_PyVarObject_ptr)['ob_size'])
                     if tsize < 0:
                         tsize = -tsize
                     size = _PyObject_VAR_SIZE(typeobj, tsize)
                     dictoffset += size
                     assert dictoffset > 0
-                    assert dictoffset % SIZEOF_VOID_P == 0
+                    if dictoffset % SIZEOF_VOID_P != 0:
+                        # Corrupt somehow?
+                        return None
 
                 dictptr = self._gdbval.cast(type_char_ptr) + dictoffset
-                PyObjectPtrPtr = gdb.lookup_type('PyObject').pointer().pointer()
+                PyObjectPtrPtr = caching_lookup_type('PyObject').pointer().pointer()
                 dictptr = dictptr.cast(PyObjectPtrPtr)
                 return PyObjectPtr.from_pyobject_ptr(dictptr.dereference())
         except RuntimeError:
