@@ -840,6 +840,35 @@ NOT_AN_ATTRIBUTE > 42
             self.assertEquals(row[2], 'python')
             self.assertEquals(row[3], 'str')
 
+    def test_heap_used(self):
+        # Ensure that "heap used" works
+        src = TestSource()
+        for i in range(3):
+            src.add_malloc(1024)
+        src.add_breakpoint()
+        source = src.as_c_source()
+
+        out = self.program_test('test_heap_used', source,
+                                commands=['run',
+                                          'heap used',
+                                          ])
+        # FIXME: do some verification of the output
+
+    def test_heap_all(self):
+        # Ensure that "heap all" works
+        src = TestSource()
+        for i in range(3):
+            src.add_malloc(1024)
+        src.add_breakpoint()
+        source = src.as_c_source()
+
+        out = self.program_test('test_heap_all', source,
+                                commands=['run',
+                                          'heap all',
+                                          ])
+        # FIXME: do some verification of the output
+
+
 from heap.parser import parse_query
 from heap.query import Constant, And, Or, Not, GetAttr, \
     Comparison__le__, Comparison__lt__, Comparison__eq__, \

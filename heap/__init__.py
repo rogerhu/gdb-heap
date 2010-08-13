@@ -184,6 +184,9 @@ class Category(namedtuple('Category', ('domain', 'kind', 'detail'))):
     def __new__(_cls, domain, kind, detail=None):
         return tuple.__new__(_cls, (domain, kind, detail))
 
+    def __str__(self):
+        return '%s:%s:%s' % (self.domain, self.kind, self.detail)
+
 class Usage(object):
     # Information about an in-use area of memory
     slots = ('start', 'size', 'category', 'level', 'hd', 'obj')

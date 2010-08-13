@@ -23,7 +23,7 @@ from heap.history import history, Snapshot, Diff
 
 from heap import iter_usage_with_progress, \
     fmt_size, fmt_addr, \
-    categorize, categorize_usage_list, \
+    categorize, categorize_usage_list, Usage, \
     hexdump_as_bytes, \
     Table, \
     MissingDebuginfo
@@ -143,7 +143,8 @@ class HeapUsed(gdb.Command):
                 continue
             size = chunk.chunksize()
             mem = chunk.as_mem()
-            category = categorize(mem, size, None) # FIXME: this is actually the size of the full chunk, rather than that seen by the program
+            u = Usage(mem, size)
+            category = categorize(u, None)
             hd = hexdump_as_bytes(mem, 32)
             print ('%6i: %s -> %s %8i bytes %20s |%s'
                    % (i, 
