@@ -561,9 +561,23 @@ Chunk size  Num chunks  Allocated size
 
         source = src.as_c_source()
 
-        out = self.program_test('test_random_allocations', source, commands=['run'] + ['heap sizes', 'cont'] * 100)
-        #print out
-        # FIXME: do some verification at each breakpoint: check that the reported values correspond to what we expect
+        out = self.program_test('test_random_allocations', source,
+                                commands=(['run']
+                                          + ['heap select', 'cont'] * 100))
+
+        # We have 100 states of the inferior process; check that each was
+        # reported as we expected it to be:
+        tables = ParsedTable.parse_lines(out)
+        self.assertEqual(len(tables), 100)
+        for i in range(100):
+            heap_select_out = tables[i]
+            #print heap_select_out
+            reported_addrs = set([heap_select_out.get_cell(0, y)
+                                  for y in range(len(heap_select_out.rows))])
+            #print reported_addrs
+
+        # FIXME: do some verification at each breakpoint: check that the
+        # reported values correspond to what we expect
 
     def test_cplusplus(self):
         '''Verify that we can detect and categorize instances of C++ classes'''
