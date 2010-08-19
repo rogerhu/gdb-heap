@@ -237,19 +237,29 @@ class ParsedTable(object):
         row = self.find_row(kvs)
         return row[self.find_col(attr2name)]
 
+    def _get_cell_value(self, cellstr):
+        if cellstr == '':
+            return None
+
+        # Remove ',' separators from numbers, and treat as decimal:
+        m = re.match('^([0-9,]+)$', cellstr) # [0-9]\,
+        if m:
+            return int(cellstr.replace(',', ''))
+
+        # Hexadecimal values:
+        m = re.match('^(0x[0-9a-f]+)$', cellstr)
+        if m:
+            return int(cellstr, 16)
+
+        # Keep as a str:
+        return cellstr
+
     def _split_cells(self, line):
         row = []
         for col in self.colmetrics:
-            cell = line[col.offset: col.offset+col.width].lstrip()
-            if cell == '':
-                cell = None
-            else:
-                # Remove ',' separators from numbers:
-                m = re.match('^([0-9,]+)$', cell) # [0-9]\,
-                if m:
-                    cell = int(cell.replace(',', ''))
-                    
-            row.append(cell)
+            cellstr = line[col.offset: col.offset+col.width].lstrip()
+            cellvalue = self._get_cell_value(cellstr)
+            row.append(cellvalue)
         return tuple(row)
 
     @classmethod
@@ -278,6 +288,7 @@ uncategorized                        98312 bytes      1          98,312
 uncategorized                         1544 bytes     43          66,392
 uncategorized                         6152 bytes     10          61,520
        python       tuple                         1,421          54,168
+                                                             0xdeadbeef
                                            TOTAL  9,377         857,592
 
 another junk line
@@ -305,7 +316,8 @@ class ParserTests(unittest.TestCase):
         # Verify (x,y) lookup, and type conversions:
         self.assertEquals(pt.get_cell(0, 0), 'python')
         self.assertEquals(pt.get_cell(1, 3), None)
-        self.assertEquals(pt.get_cell(4, 5), 857592)
+        self.assertEquals(pt.get_cell(4, 5), 0xdeadbeef)
+        self.assertEquals(pt.get_cell(4, 6), 857592)
 
         # Verify searching by value:
         self.assertEquals(pt.find_col('Count'), 3)
