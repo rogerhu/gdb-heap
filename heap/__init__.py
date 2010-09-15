@@ -201,7 +201,7 @@ class Usage(object):
         self.category = category
         self.level = level
         self.hd = hd
-        self.obj=obj
+        self.obj = obj
         
     def __repr__(self):
         result = 'Usage(%s, %s' % (hex(self.start), hex(self.size))
