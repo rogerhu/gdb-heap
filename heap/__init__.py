@@ -134,6 +134,11 @@ class WrappedPointer(WrappedValue):
     def cast(self, type_):
         return WrappedPointer(self._gdbval.cast(type_))
 
+    def categorize_refs(self, usage_set, level=0, detail=None):
+        '''Hook for categorizing references known by the type this points to'''
+        # do nothing by default:
+        pass
+
 
 def fmt_size(size):
     '''
@@ -457,6 +462,11 @@ def categorize_usage_list(usage_list):
     for u in ProgressNotifier(iter(usage_list), 'Blocks analyzed'):
         # Cover the simple cases, where the category can be figured out directly:
         u.ensure_category(usage_set)
+
+        # Cross-references:
+        if u.obj:
+            if u.obj.categorize_refs(usage_set):
+                continue
 
         # Try to categorize buffers used by python objects:
         if pycategorizer:

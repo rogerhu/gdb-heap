@@ -243,10 +243,6 @@ class PyObjectPtr(WrappedPointer):
         # old-style classes have to do more work
         return Category('python', self.safe_tp_name())
 
-    def categorize_refs(self, usage_set, level=0, detail=None):
-        # do nothing by default:
-        pass
-
     def as_malloc_addr(self):
         ob_type = addr['ob_type']
         tp_flags = ob_type['tp_flags']
