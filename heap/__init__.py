@@ -505,6 +505,13 @@ def categorize(u, usage_set):
         if cpp_cls:
             return Category('C++', cpp_cls)
 
+    # GObject detection:
+    from gobject import as_gtype_instance
+    ginst = as_gtype_instance(addr, size)
+    if ginst:
+        u.obj = ginst
+        return ginst.categorize()
+
     s = as_nul_terminated_string(addr, size)
     if s and len(s) > 2:
         return Category('C', 'string data')

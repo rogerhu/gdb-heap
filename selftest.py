@@ -646,6 +646,65 @@ public:
         return table.find_row(kvs)
         # ...which will raise a RowNotFound exception if there's a problem
 
+    def test_gobject(self):
+        out = self.command_test(['gtk-demo'],
+                                commands=['set breakpoint pending yes',
+                                          'set environment G_SLICE=always-malloc', # for now
+                                          'break gtk_main',
+                                          'run',
+                                          'heap',
+                                          ])
+        # print out
+
+        tables = ParsedTable.parse_lines(out)
+        heap_out = tables[0]
+
+        # Ensure that instances of GObject classes are categorized:
+        self.assertHasRow(heap_out,
+                          [('Domain', 'GType'), ('Kind', 'GtkTreeView')])
+        self.assertHasRow(heap_out,
+                          [('Domain', 'GType'), ('Kind', 'GtkLabel')])
+
+        # Ensure that instances of fundamental boxed types are categorized:
+        self.assertHasRow(heap_out,
+                          [('Domain', 'GType'), ('Kind', 'gchar')])
+        self.assertHasRow(heap_out,
+                          [('Domain', 'GType'), ('Kind', 'guint')])
+
+        # Ensure that the code detected buffers used by the GLib/GTK types:
+        self.assertHasRow(heap_out,
+                          [('Domain', 'GType'),
+                           ('Kind', 'GdkPixbuf pixels'),
+                           ('Detail', '107w x 140h')])
+
+        # GdkImage -> X11 Images -> data:
+        self.assertHasRow(heap_out,
+                          [('Domain', 'GType'), ('Kind', 'GdkImage')])
+        self.assertHasRow(heap_out,
+                          [('Domain', 'X11'), ('Kind', 'Image')])
+        if False:
+            # Only seen whilst using X forwarded over ssh:
+            self.assertHasRow(heap_out,
+                              [('Domain', 'X11'), ('Kind', 'Image data')])
+        # In both above rows, "Detail" contains the exact dimensions, but these
+        # seem to vary with the resolution of the display the test is run
+        # against
+
+        # FreeType:
+        # These seem to be highly dependent on the environment; I originally
+        # developed this whilst using X forwarded over ssh
+        if False:
+            self.assertHasRow(heap_out,
+                              [('Domain', 'GType'),
+                               ('Kind', 'PangoCairoFcFontMap')])
+            self.assertHasRow(heap_out,
+                              [('Domain', 'FreeType'),
+                               ('Kind', 'Library')])
+            self.assertHasRow(heap_out,
+                              [('Domain', 'FreeType'),
+                               ('Kind', 'raster_pool')])
+
+
     def test_python(self):
         # Test that we can debug CPython's memory usage
 
