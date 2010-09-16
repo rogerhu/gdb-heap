@@ -646,6 +646,30 @@ public:
         return table.find_row(kvs)
         # ...which will raise a RowNotFound exception if there's a problem
 
+    def assertFoundCategory(self, table, domain, kind, detail=None):
+        # Ensure that the result table has a row of the given category
+        # (or raise RowNotFound)
+        kvs = [('Domain', domain),
+               ('Kind', kind)]
+        if detail:
+            kvs.append( ('Detail', detail) )
+
+        self.assertHasRow(table, kvs)
+
+    def test_assertions(self):
+        # Ensure that the domain-specific assertions work
+        tables = ParsedTable.parse_lines(test_table)
+        self.assertEquals(len(tables), 2)
+        pt = tables[0]
+
+        self.assertHasRow(pt, [('Domain', 'python'), ('Kind', 'str')])
+        self.assertRaises(RowNotFound,
+                          lambda: self.assertHasRow(pt, [('Domain', 'ruby')]))
+
+        self.assertFoundCategory(pt, 'python', 'str')
+        self.assertRaises(RowNotFound,
+                          lambda: self.assertFoundCategory(pt, 'ruby', 'class'))
+
     def test_gobject(self):
         out = self.command_test(['gtk-demo'],
                                 commands=['set breakpoint pending yes',
@@ -660,32 +684,23 @@ public:
         heap_out = tables[0]
 
         # Ensure that instances of GObject classes are categorized:
-        self.assertHasRow(heap_out,
-                          [('Domain', 'GType'), ('Kind', 'GtkTreeView')])
-        self.assertHasRow(heap_out,
-                          [('Domain', 'GType'), ('Kind', 'GtkLabel')])
+        self.assertFoundCategory(heap_out, 'GType', 'GtkTreeView')
+        self.assertFoundCategory(heap_out, 'GType', 'GtkLabel')
 
         # Ensure that instances of fundamental boxed types are categorized:
-        self.assertHasRow(heap_out,
-                          [('Domain', 'GType'), ('Kind', 'gchar')])
-        self.assertHasRow(heap_out,
-                          [('Domain', 'GType'), ('Kind', 'guint')])
+        self.assertFoundCategory(heap_out, 'GType', 'gchar')
+        self.assertFoundCategory(heap_out, 'GType', 'guint')
 
         # Ensure that the code detected buffers used by the GLib/GTK types:
-        self.assertHasRow(heap_out,
-                          [('Domain', 'GType'),
-                           ('Kind', 'GdkPixbuf pixels'),
-                           ('Detail', '107w x 140h')])
+        self.assertFoundCategory(heap_out,
+                                 'GType', 'GdkPixbuf pixels', '107w x 140h')
 
         # GdkImage -> X11 Images -> data:
-        self.assertHasRow(heap_out,
-                          [('Domain', 'GType'), ('Kind', 'GdkImage')])
-        self.assertHasRow(heap_out,
-                          [('Domain', 'X11'), ('Kind', 'Image')])
+        self.assertFoundCategory(heap_out, 'GType', 'GdkImage')
+        self.assertFoundCategory(heap_out, 'X11', 'Image')
         if False:
             # Only seen whilst using X forwarded over ssh:
-            self.assertHasRow(heap_out,
-                              [('Domain', 'X11'), ('Kind', 'Image data')])
+            self.assertFoundCategory(heap_out, 'X11', 'Image data')
         # In both above rows, "Detail" contains the exact dimensions, but these
         # seem to vary with the resolution of the display the test is run
         # against
@@ -694,15 +709,9 @@ public:
         # These seem to be highly dependent on the environment; I originally
         # developed this whilst using X forwarded over ssh
         if False:
-            self.assertHasRow(heap_out,
-                              [('Domain', 'GType'),
-                               ('Kind', 'PangoCairoFcFontMap')])
-            self.assertHasRow(heap_out,
-                              [('Domain', 'FreeType'),
-                               ('Kind', 'Library')])
-            self.assertHasRow(heap_out,
-                              [('Domain', 'FreeType'),
-                               ('Kind', 'raster_pool')])
+            self.assertFoundCategory(heap_out, 'GType', 'PangoCairoFcFontMap')
+            self.assertFoundCategory(heap_out, 'FreeType', 'Library')
+            self.assertFoundCategory(heap_out, 'FreeType', 'raster_pool')
 
 
     def test_python(self):
@@ -727,35 +736,28 @@ public:
         # expect to be present:
         for kind in ('str', 'unicode', 'list', 'tuple', 'dict', 'type', 'code',
                      'set', 'frozenset', 'function', 'module', 'frame', ):
-            self.assertHasRow(heap_out,
-                              [('Kind', kind), ('Domain', 'python')])
+            self.assertFoundCategory(heap_out, 'python', kind)
 
         # Ensure that bytecode "strings" are marked as such:
-        self.assertHasRow(heap_out,
-                          [('Domain', 'python'),
-                           ('Kind', 'str'), ('Detail', 'bytecode')])
+        self.assertFoundCategory(heap_out, 'python', 'str', 'bytecode')
 
         # Ensure that old-style classes are printed with a meaningful name
         # (i.e. not just "type"):
         for clsname in ('OldStyle', 'OldStyleManyAttribs'):
-            self.assertHasRow(heap_out,
-                              [('Domain', 'python'),
-                               ('Kind',   clsname),
-                               ('Detail', 'old-style')])
+            self.assertFoundCategory(heap_out,
+                                     'python', clsname, 'old-style')
 
             # ...and that their instance dicts are marked:
-            self.assertHasRow(heap_out,
-                              [('Domain', 'cpython'),
-                               ('Kind',   'PyDictObject'),
-                               ('Detail', '%s.__dict__' % clsname)])
+            self.assertFoundCategory(heap_out,
+                                     'cpython', 'PyDictObject',
+                                     '%s.__dict__' % clsname)
 
         # ...and that an old-style instance with enough attributes to require a
         # separate PyDictEntry buffer for its __dict__ has that buffer marked
         # with the typename:
-        self.assertHasRow(heap_out,
-                          [('Domain', 'cpython'),
-                           ('Kind',   'PyDictEntry table'),
-                           ('Detail', 'OldStyleManyAttribs.__dict__')])
+        self.assertFoundCategory(heap_out,
+                                 'cpython', 'PyDictEntry table',
+                                 'OldStyleManyAttribs.__dict__')
 
         # Likewise for new-style classes:
         for clsname in ('NewStyle', 'NewStyleManyAttribs'):
@@ -763,29 +765,24 @@ public:
                               [('Domain', 'python'),
                                ('Kind',   clsname),
                                ('Detail', None)])
-            self.assertHasRow(heap_out,
-                              [('Domain', 'python'),
-                               ('Kind',   'dict'),
-                               ('Detail', '%s.__dict__' % clsname)])
-        self.assertHasRow(heap_out,
-                          [('Domain', 'cpython'),
-                           ('Kind',   'PyDictEntry table'),
-                           ('Detail', 'NewStyleManyAttribs.__dict__')])
+            self.assertFoundCategory(heap_out,
+                              'python', 'dict', '%s.__dict__' % clsname)
+        self.assertFoundCategory(heap_out,
+                                 'cpython', 'PyDictEntry table',
+                                 'NewStyleManyAttribs.__dict__')
 
         # Ensure that the code detected buffers used by python types:
         for kind in ('PyDictEntry table', 'PyListObject ob_item table',
                      'PySetObject setentry table',
                      'PyUnicodeObject buffer', 'PyDictEntry table'):
-            self.assertHasRow(heap_out,
-                              [('Kind', kind), ('Domain', 'cpython')])
+            self.assertFoundCategory(heap_out,
+                                     'cpython', kind)
 
         # and of other types:
-        self.assertHasRow(heap_out,
-                          [('Kind', 'string data'),
-                           ('Domain', 'C')])
-        self.assertHasRow(heap_out,
-                          [('Kind', 'pool_header overhead'),
-                           ('Domain', 'pyarena')])
+        self.assertFoundCategory(heap_out,
+                                 'C', 'string data')
+        self.assertFoundCategory(heap_out,
+                                 'pyarena', 'pool_header overhead')
 
         # Ensure that the "interned" table is identified (it's typically
         # at least 200k on a 64-bit build):
@@ -799,14 +796,12 @@ public:
         # Ensure that we detect python sqlite3 objects:
         for kind in ('sqlite3.Connection', 'sqlite3.Statement',
                      'sqlite3.Cache'):
-            self.assertHasRow(heap_out,
-                              [('Domain', 'python'),
-                               ('Kind', kind)])
+            self.assertFoundCategory(heap_out,
+                                     'python', kind)
         # ...and that we detect underlying sqlite3 buffers:
         for kind in ('sqlite3', 'sqlite3_stmt'):
-            self.assertHasRow(heap_out,
-                              [('Domain', 'sqlite3'),
-                               ('Kind', kind)])
+            self.assertFoundCategory(heap_out,
+                                     'sqlite3', kind)
 
 
     def test_select(self):
