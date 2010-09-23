@@ -580,5 +580,24 @@ def iter_usage():
 
             
     
+def looks_like_ptr(value):
+    '''Does this gdb.Value pointer's value looks reasonable?
+
+    For use when casting a block of memory to a structure on pointer fields
+    within that block of memory.
+    '''
+
+    # NULL is acceptable; assume that it's 0 on every arch we care about
+    if value == 0:
+        return True
+
+    # Assume that pointers aren't allocated in the bottom 1MB of a process'
+    # address space:
+    if value < (1024 * 1024):
+        return False
+
+    # Assume that if it got this far, that it's valid:
+    return True
+
 
 

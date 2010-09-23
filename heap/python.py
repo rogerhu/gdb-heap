@@ -3,7 +3,7 @@ This file is licensed under the PSF license
 '''
 import gdb
 from heap import WrappedPointer, caching_lookup_type, Usage, \
-    type_void_ptr, fmt_addr, Category
+    type_void_ptr, fmt_addr, Category, looks_like_ptr
 
 type_size_t = gdb.lookup_type('size_t')
 SIZEOF_VOID_P = type_void_ptr.sizeof
@@ -385,8 +385,18 @@ def is_pyobject_ptr(addr):
             if obtype != 0:
                 type_refcnt = obtype['ob_refcnt']
                 if type_refcnt > 0 and type_refcnt < 0xffff:
+                    type_ob_size = obtype['ob_size']
+
+                    if type_ob_size > 0xffff:
+                        return 0
+
+                    for fieldname in ('tp_del', 'tp_mro', 'tp_init', 'tp_getset'):
+                        if not looks_like_ptr(obtype[fieldname]):
+                            return 0
+
                     # Then this looks like a Python object:
                     return PyObjectPtr.from_pyobject_ptr(pyop)
+
     except (RuntimeError, UnicodeDecodeError):
         pass # Not a python object (or corrupt)
     
