@@ -491,7 +491,7 @@ def categorize(u, usage_set):
         except (RuntimeError, UnicodeEncodeError, UnicodeDecodeError):
             # If something went wrong, assume that this wasn't really a python
             # object, and fall through:
-            print "couldn't categorize pyop:" % pyop
+            print "couldn't categorize pyop:", pyop
             pass
 
     # C++ detection: only enabled if we can capture "execute"; there seems to
