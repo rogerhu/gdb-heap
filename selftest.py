@@ -74,26 +74,30 @@ class TestSource(object):
             typename = 'void *'
             cast = ''
 
-        self.operations += self.indent + '%s%s = %smalloc(0x%x); /* %i */\n' % (typename, varname, cast, size, size)
+        self.add_line('%s%s = %smalloc(0x%x); /* %i */'
+                      % (typename, varname, cast, size, size))
         if debug:
-            self.operations += self.indent + 'printf(__FILE__ ":%%i:%s=%%p\\n", __LINE__, %s);\n' % (varname, varname)
-            self.operations += self.indent + 'fflush(stdout);\n'
+            self.add_line('printf(__FILE__ ":%%i:%s=%%p\\n", __LINE__, %s);'
+                          % (varname, varname))
+            self.add_line('fflush(stdout);')
         return varname
 
     def add_realloc(self, varname, size, debug=False):
         self.num_ptrs += 1
         new_varname = 'ptr%03i'% self.num_ptrs
-        self.operations += self.indent + 'void *%s = realloc(%s, 0x%x);\n' % (new_varname, varname, size)
+        self.add_line('void *%s = realloc(%s, 0x%x);'
+                      % (new_varname, varname, size))
         if debug:
-            self.operations += self.indent + 'printf(__FILE__ ":%%i:%s=%%p\\n", __LINE__, %s);\n' % (new_varname, new_varname)
-            self.operations += self.indent + 'fflush(stdout);\n'
+            self.add_line('printf(__FILE__ ":%%i:%s=%%p\\n", __LINE__, %s);'
+                          % (new_varname, new_varname))
+            self.add_line('fflush(stdout);')
         return new_varname
 
     def add_free(self, varname, debug=False):
-        self.operations += self.indent + 'free(%s);\n' % varname
+        self.add_line('free(%s);' % varname)
 
     def add_breakpoint(self):
-        self.operations += self.indent + '__asm__ __volatile__ ("int $03");\n'
+        self.add_line('__asm__ __volatile__ ("int $03");')
 
     def as_c_source(self):
         result = '''
@@ -626,9 +630,9 @@ public:
 };
 '''
         for i in range(100):
-            src.operations += '{Foo *f = new Foo();}\n'
+            src.add_line('{Foo *f = new Foo();}')
             if i % 2:
-                src.operations += '{Bar *b = new Bar();}\n'
+                src.add_line('{Bar *b = new Bar();}')
         src.add_breakpoint()
         source = src.as_c_source()
 
