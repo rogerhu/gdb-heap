@@ -61,10 +61,20 @@ class TestSource(object):
         self.num_ptrs = 0
         self.indent = '    '
 
-    def add_malloc(self, size, debug=False):
+    def add_line(self, code):
+        self.operations += self.indent + code + '\n'
+
+    def add_malloc(self, size, debug=False, typename=None):
         self.num_ptrs += 1
         varname = 'ptr%03i'% self.num_ptrs
-        self.operations += self.indent + 'void *%s = malloc(0x%x); /* %i */\n' % (varname, size, size)
+
+        if typename:
+            cast = '(%s)' % typename
+        else:
+            typename = 'void *'
+            cast = ''
+
+        self.operations += self.indent + '%s%s = %smalloc(0x%x); /* %i */\n' % (typename, varname, cast, size, size)
         if debug:
             self.operations += self.indent + 'printf(__FILE__ ":%%i:%s=%%p\\n", __LINE__, %s);\n' % (varname, varname)
             self.operations += self.indent + 'fflush(stdout);\n'
@@ -578,6 +588,23 @@ Chunk size  Num chunks  Allocated size
 
         # FIXME: do some verification at each breakpoint: check that the
         # reported values correspond to what we expect
+
+    def test_random_buffers(self):
+        # Fuzz-testing: try to break the heuristics by throwing random bytes
+        # at them.  Note that we do the randomization at the python level when
+        # generating the C code, so that the result of running any given C code
+        # is entirely reproducable
+        src = TestSource()
+        for i in range(100):
+            varname = src.add_malloc(256, typename='unsigned char*')
+            for offset in range(256):
+                value = random.randint(0, 255)
+                src.add_line('%s[%i]=0x%02x;' % (varname, offset, value))
+        src.add_breakpoint()
+        source = src.as_c_source()
+        out = self.program_test('test_random_buffers', source, commands=['run',  'heap'])
+        # print out
+
 
     def test_cplusplus(self):
         '''Verify that we can detect and categorize instances of C++ classes'''
