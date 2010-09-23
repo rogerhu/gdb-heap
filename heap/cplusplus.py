@@ -19,11 +19,18 @@ import re
 
 import gdb
 
+from heap import caching_lookup_type, looks_like_ptr
 from heap.compat import execute
+
+void_ptr_ptr = caching_lookup_type('void').pointer().pointer()
 
 def get_class_name(addr, size):
     # Try to detect a vtable ptr at the top of this object:
-    info = execute('info sym *(void **)0x%x' % addr)
+    vtable = gdb.Value(addr).cast(void_ptr_ptr).dereference()
+    if not looks_like_ptr(vtable):
+        return None
+
+    info = execute('info sym (void *)0x%x' % long(vtable))
     # "vtable for Foo + 8 in section .rodata of /home/david/heap/test_cplusplus"
     m = re.match('vtable for (.*) \+ (.*)', info)
     if m:
