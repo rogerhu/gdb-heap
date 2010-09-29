@@ -27,7 +27,8 @@ import re
 
 import gdb
 
-from heap import WrappedPointer, WrappedValue, caching_lookup_type, type_char_ptr
+from heap import WrappedPointer, WrappedValue, caching_lookup_type, \
+    type_char_ptr, check_missing_debuginfo
 
 class MChunkPtr(WrappedPointer):
     '''Wrapper around glibc's mchunkptr
