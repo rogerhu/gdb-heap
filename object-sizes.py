@@ -45,7 +45,7 @@ class NewStyleWithSlots(object):
 objs = []
 for impl in [NamedTuple, OldStyle, NewStyle, NewStyleWithSlots]:
     objs.append(impl(x=3, y=4))
-print objs
+print(objs)
 
 
 # Test creating an object with more than 8 attributes, so that the __dict__

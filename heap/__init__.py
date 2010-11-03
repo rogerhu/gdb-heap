@@ -387,19 +387,12 @@ class PythonCategorizer(object):
                                         Category('cpython', 'PySetObject setentry table', None))
             return True
 
-        elif c.kind == 'unicode':
-            unicode_ptr = gdb.Value(u.start).cast(self._type_PyUnicodeObject_ptr)
-            m_str = long(unicode_ptr['str'])
-            usage_set.set_addr_category(m_str,
-                                        Category('cpython', 'PyUnicodeObject buffer', None))
-            return True
-
         if c.kind == 'code':
             # Python 2.6's PyCode_Type doesn't have Py_TPFLAGS_HAVE_GC:
             code_ptr = gdb.Value(u.start).cast(self._type_PyCodeObject_ptr)
             co_code =  long(code_ptr['co_code'])
             usage_set.set_addr_category(co_code,
-                                        Category('python', 'str', 'bytecode'),
+                                        Category('python', 'str', 'bytecode'), # FIXME: on py3k this should be bytes
                                         level=1)
             return True
         elif c.kind == 'sqlite3.Statement':

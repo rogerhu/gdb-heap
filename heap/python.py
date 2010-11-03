@@ -218,6 +218,9 @@ class PyObjectPtr(WrappedPointer):
         if tp_flags & Py_TPFLAGS_HEAPTYPE:
             return HeapTypeObjectPtr(addr)
 
+        if tp_flags & Py_TPFLAGS_UNICODE_SUBCLASS:
+            return PyUnicodeObjectPtr(addr.cast(caching_lookup_type('PyUnicodeObject').pointer()))
+
         if tp_flags & Py_TPFLAGS_DICT_SUBCLASS:
             return PyDictObjectPtr(addr.cast(caching_lookup_type('PyDictObject').pointer()))
 
@@ -262,6 +265,20 @@ def _PyObject_VAR_SIZE(typeobj, nitems):
            ).cast(type_size_t)
 def int_from_int(gdbval):
     return int(gdbval)
+
+class PyUnicodeObjectPtr(PyObjectPtr):
+    """
+    Class wrapping a gdb.Value that's a PyUnicodeObject* within the process
+    being debugged.
+    """
+    _typename = 'PyUnicodeObject'
+
+    def categorize_refs(self, usage_set, level=0, detail=None):
+        m_str = long(self.field('str'))
+        usage_set.set_addr_category(m_str,
+                                    Category('cpython', 'PyUnicodeObject buffer', detail),
+                                    level)
+        return True
 
 class PyDictObjectPtr(PyObjectPtr):
     """

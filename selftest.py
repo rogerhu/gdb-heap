@@ -744,13 +744,17 @@ public:
             self.assertFoundCategory(heap_out, 'FreeType', 'Library')
             self.assertFoundCategory(heap_out, 'FreeType', 'raster_pool')
 
+    def test_python2(self):
+        self._impl_test_python('python2', py3k=False)
 
-    def test_python(self):
-        # Test that we can debug CPython's memory usage
+    def test_python3(self):
+        self._impl_test_python('python3', py3k=True)
+
+    def _impl_test_python(self, pyruntime, py3k):
+        # Test that we can debug CPython's memory usage, for a given runtime
 
         # Invoke a test python script, stopping at a breakpoint
-
-        out = self.command_test(['python', 'object-sizes.py'],
+        out = self.command_test([pyruntime, 'object-sizes.py'],
                                 commands=['set breakpoint pending yes',
                                           'break builtin_id',
                                           'run',
@@ -765,23 +769,29 @@ public:
         
         # Ensure that the code detected instances of various python types we
         # expect to be present:
-        for kind in ('str', 'unicode', 'list', 'tuple', 'dict', 'type', 'code',
+        for kind in ('str', 'list', 'tuple', 'dict', 'type', 'code',
                      'set', 'frozenset', 'function', 'module', 'frame', ):
             self.assertFoundCategory(heap_out, 'python', kind)
 
+        if py3k:
+            self.assertFoundCategory(heap_out, 'python', 'bytes')
+        else:
+            self.assertFoundCategory(heap_out, 'python', 'unicode')
+
         # Ensure that bytecode "strings" are marked as such:
-        self.assertFoundCategory(heap_out, 'python', 'str', 'bytecode')
+        self.assertFoundCategory(heap_out, 'python', 'str', 'bytecode') # FIXME
 
         # Ensure that old-style classes are printed with a meaningful name
         # (i.e. not just "type"):
-        for clsname in ('OldStyle', 'OldStyleManyAttribs'):
-            self.assertFoundCategory(heap_out,
-                                     'python', clsname, 'old-style')
+        if not py3k:
+            for clsname in ('OldStyle', 'OldStyleManyAttribs'):
+                self.assertFoundCategory(heap_out,
+                                         'python', clsname, 'old-style')
 
-            # ...and that their instance dicts are marked:
-            self.assertFoundCategory(heap_out,
-                                     'cpython', 'PyDictObject',
-                                     '%s.__dict__' % clsname)
+                # ...and that their instance dicts are marked:
+                self.assertFoundCategory(heap_out,
+                                         'cpython', 'PyDictObject',
+                                         '%s.__dict__' % clsname)
 
         # ...and that an old-style instance with enough attributes to require a
         # separate PyDictEntry buffer for its __dict__ has that buffer marked
