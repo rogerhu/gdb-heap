@@ -373,6 +373,7 @@ class HeapTypeObjectPtr(PyObjectPtr):
 def is_pyobject_ptr(addr):
     try:
         _type_pyop = caching_lookup_type('PyObject').pointer()
+        _type_pyvarop = caching_lookup_type('PyVarObject').pointer()
     except RuntimeError:
         # not linked against python
         return None
@@ -383,9 +384,9 @@ def is_pyobject_ptr(addr):
         if ob_refcnt >=0 and ob_refcnt < 0xffff:
             obtype = pyop['ob_type']
             if obtype != 0:
-                type_refcnt = obtype['ob_refcnt']
+                type_refcnt = obtype.cast(_type_pyop)['ob_refcnt']
                 if type_refcnt > 0 and type_refcnt < 0xffff:
-                    type_ob_size = obtype['ob_size']
+                    type_ob_size = obtype.cast(_type_pyvarop)['ob_size']
 
                     if type_ob_size > 0xffff:
                         return 0
