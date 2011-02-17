@@ -2,3 +2,5 @@
 *.pyc
 *.pyo
 gdb-heap-*.tar.bz2
+test_*
+
