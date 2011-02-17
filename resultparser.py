@@ -84,7 +84,36 @@ class ParsedTable(object):
 
     def __str__(self):
         return self.rawdata
+
+    def as_rst_grid_table(self):
+
+        def _get_separator_row(colwidths, sepchar):
+            return '+' + ('+'.join([sepchar * width for width in colwidths])) + '+\n'
+
+        def _get_row(values, colwidths):
+            row = '|'
+            cells = []
+            for value, width in zip(values, colwidths):
+                if value is None:
+                    cells.append(' ' * width)
+                else:
+                    formatString = "%%%ds" % width # to generate e.g. "%20s" 
+                    cells.append(formatString % value)
+            row += '|'.join([cell for cell in cells])
+            row += '|\n'
+            return row
             
+        colwidths = [colmetric.width for colmetric in self.colmetrics]
+
+        result = _get_separator_row(colwidths, '-')
+        result += _get_row(self.colnames, colwidths)
+        result += _get_separator_row(colwidths, '=')
+        for row in self.rows:
+            result += _get_row(row, colwidths)
+            result += _get_separator_row(colwidths, '-')
+
+        return result
+
     def get_cell(self, x, y):
         return self.rows[y][x]
 
@@ -217,6 +246,34 @@ class ParserTests(unittest.TestCase):
     def test_multiple_tables(self):
         tables = ParsedTable.parse_lines(test_table * 5)
         self.assertEquals(len(tables), 10)
+
+    def test_rst(self):
+        tables = ParsedTable.parse_lines(test_table)
+        self.assertEquals(len(tables), 2)
+        pt = tables[0]
+        
+        rst_text = pt.as_rst_grid_table()
+        
+        exp = (
+            '+-------------+----------+---------------------+-----+--------------+\n'
+            '|       Domain|      Kind|               Detail|Count|Allocated size|\n'
+            '+=============+==========+=====================+=====+==============+\n'
+            '|       python|       str|                     | 3891|        234936|\n'
+            '+-------------+----------+---------------------+-----+--------------+\n'
+            '|uncategorized|          |          98312 bytes|    1|         98312|\n'
+            '+-------------+----------+---------------------+-----+--------------+\n'
+            '|uncategorized|          |           1544 bytes|   43|         66392|\n'
+            '+-------------+----------+---------------------+-----+--------------+\n'
+            '|uncategorized|          |           6152 bytes|   10|         61520|\n'
+            '+-------------+----------+---------------------+-----+--------------+\n'
+            '|       python|     tuple|                     | 1421|         54168|\n'
+            '+-------------+----------+---------------------+-----+--------------+\n'
+            '|             |          |                     |     |    3735928559|\n'
+            '+-------------+----------+---------------------+-----+--------------+\n'
+            '|             |          |                TOTAL| 9377|        857592|\n'
+            '+-------------+----------+---------------------+-----+--------------+\n')
+        
+        self.assertEquals(rst_text, exp)
 
 if __name__ == "__main__":
     unittest.main()
