@@ -466,7 +466,7 @@ def categorize_usage_list(usage_list):
             if pycategorizer.categorize(u, usage_set):
                 continue
 
-    from python import python_categorization
+    from cpython import python_categorization
     python_categorization(usage_set)
 
 
@@ -474,7 +474,7 @@ def categorize(u, usage_set):
     '''Given an in-use block, try to guess what it's being used for
     If usage_set is provided, this categorization may lead to further
     categorizations'''
-    from heap.python import as_python_object, obj_addr_to_gc_addr
+    from heap.cpython import as_python_object, obj_addr_to_gc_addr
     addr, size = u.start, u.size
     pyop = as_python_object(addr)
     if pyop:
@@ -544,7 +544,7 @@ def iter_usage_with_progress():
 def iter_usage():
     # Iterate through glibc, and within that, within Python arena blocks, as appropriate
     from heap.glibc import get_ms
-    from heap.python import ArenaDetection, PyArenaPtr, ArenaObject
+    from heap.cpython import ArenaDetection, PyArenaPtr, ArenaObject
     ms = get_ms()
 
     pyarenas = ArenaDetection()
