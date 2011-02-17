@@ -632,6 +632,27 @@ public:
             self.assertFoundCategory(heap_out,
                                      'sqlite3', kind)
 
+    def test_pypy(self):
+        # Try to investigate memory usage of pypy-c
+        # Developed using pypy-1.4.1 as packaged on Fedora.
+        #
+        # In order to get meaningful data, let's try to trap the exit point
+        # of pypy-c within gdb.
+        #
+        # For now, lets try to put a breakpoint in this location within the
+        # generated "pypy_g_entry_point" C function:
+        #   print_stats:158 :         debug_stop("jit-summary")
+        out = self.command_test(['pypy', 'object-sizes.py'],
+                                commands=['set breakpoint pending yes',
+
+                                          'break pypy_debug_stop',
+                                          'condition 1 0==strcmp(category, "jit-summary")',
+
+                                          'run',
+                                          'heap',
+                                          ])
+        tables = ParsedTable.parse_lines(out)
+        select_out = tables[0]
 
     def test_select(self):
         # Ensure that "heap select" with no query does something sane

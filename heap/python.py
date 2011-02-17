@@ -439,6 +439,7 @@ def as_python_object(addr):
     # FIXME: what about the debug allocator?
     try:
         _type_pyop = caching_lookup_type('PyObject').pointer()
+        _type_PyGC_Head = caching_lookup_type('PyGC_Head')
     except RuntimeError:
         # not linked against python
         return None
@@ -447,7 +448,6 @@ def as_python_object(addr):
         return pyop
     else:
         # maybe a GC type:
-        _type_PyGC_Head = caching_lookup_type('PyGC_Head')
         _type_PyGC_Head_ptr = _type_PyGC_Head.pointer()
         gc_ptr = gdb.Value(addr).cast(_type_PyGC_Head_ptr)
         # print gc_ptr.dereference()
@@ -472,13 +472,18 @@ class ArenaObject(WrappedPointer):
             # Not linked against python, or no debug information:
             return
 
-        for i in xrange(val_maxarenas):
-            # Look up "&arenas[i]":
-            obj = ArenaObject(val_arenas[i].address)
+        try:
+            for i in xrange(val_maxarenas):
+                # Look up "&arenas[i]":
+                obj = ArenaObject(val_arenas[i].address)
 
-            # obj->address == 0 indicates an unused entry within the "arenas" array:
-            if obj.address != 0:
-                yield obj
+                # obj->address == 0 indicates an unused entry within the "arenas" array:
+                if obj.address != 0:
+                    yield obj
+        except RuntimeError:
+            # pypy also has a symbol named "arenas", of type "long unsigned int * volatile"
+            # For now, ignore it:
+            return
 
     def __init__(self, gdbval):
         WrappedPointer.__init__(self, gdbval)

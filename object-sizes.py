@@ -20,11 +20,14 @@
 # It creates various kinds of object, so that we can verify that gdb-heap
 # detects them (and their supporting buffers)
 
-from collections import namedtuple
 
 # Four different kinds of (x, y) coordinate:
 
-NamedTuple = namedtuple('NamedTuple', ('x', 'y'))
+try:
+    from collections import namedtuple
+    NamedTuple = namedtuple('NamedTuple', ('x', 'y'))
+except ImportError:
+    NamedTuple = None
 
 class OldStyle:
     def __init__(self, x, y):
@@ -43,7 +46,10 @@ class NewStyleWithSlots(object):
         self.y = y
 
 objs = []
-for impl in [NamedTuple, OldStyle, NewStyle, NewStyleWithSlots]:
+types = [OldStyle, NewStyle, NewStyleWithSlots]
+if NamedTuple:
+    types.append(NamedTuple)
+for impl in types:
     objs.append(impl(x=3, y=4))
 print(objs)
 
