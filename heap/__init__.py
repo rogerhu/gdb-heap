@@ -41,6 +41,11 @@ except ImportError:
     # Support importing heap.parser from outside gdb
     pass
 
+
+class WrongInferiorProcess(RuntimeError):
+    def __init__(self, hint):
+        self.hint = hint
+
 NUM_HEXDUMP_BYTES = 20
 
 __type_cache = {}
@@ -487,6 +492,12 @@ def categorize(u, usage_set):
             print "couldn't categorize pyop:", pyop
             pass
 
+    # PyPy detection:
+    from heap.pypy import pypy_categorizer
+    cat = pypy_categorizer(addr, size)
+    if cat:
+        return cat
+
     # C++ detection: only enabled if we can capture "execute"; there seems to
     # be a bad interaction between pagination and redirection: all output from
     # "heap" disappears in the fallback form of execute, unless we "set pagination off"
@@ -541,19 +552,56 @@ class ProgressNotifier(object):
 def iter_usage_with_progress():
     return ProgressNotifier(iter_usage(), 'Blocks retrieved')
 
+
+class CachedInferiorState(object):
+    """
+    Cached state containing information scraped from the inferior process
+    """
+    def __init__(self):
+        self._arena_detectors = []
+
+    def add_arena_detector(self, detector):
+        self._arena_detectors.append(detector)
+
+    def detect_arena(self, ptr, chunksize):
+        '''Detect if this ptr returned by malloc is in use by any of the
+        layered allocation schemes, returning arena object if it is, None
+        if not'''
+        for detector in self._arena_detectors:
+            arena = detector.as_arena(ptr, chunksize)
+            if arena:
+                return arena
+                
+        # Not found:
+        return None
+
+        
 def iter_usage():
     # Iterate through glibc, and within that, within Python arena blocks, as appropriate
     from heap.glibc import get_ms
-    from heap.cpython import ArenaDetection, PyArenaPtr, ArenaObject
     ms = get_ms()
 
-    pyarenas = ArenaDetection()
+    cached_state = CachedInferiorState()
+
+    from heap.cpython import ArenaDetection as CPythonArenaDetection, PyArenaPtr, ArenaObject
+    try:
+        cpython_arenas = CPythonArenaDetection()
+        cached_state.add_arena_detector(cpython_arenas)
+    except WrongInferiorProcess:
+        pass
+
+    from heap.pypy import ArenaDetection as PyPyArenaDetection
+    try:
+        pypy_arenas = PyPyArenaDetection()
+        cached_state.add_arena_detector(pypy_arenas)
+    except WrongInferiorProcess:
+        pass
 
     for i, chunk in enumerate(ms.iter_mmap_chunks()):
         mem_ptr = chunk.as_mem()
         chunksize = chunk.chunksize()
 
-        arena = pyarenas.as_py_arena(mem_ptr, chunksize)
+        arena = cached_state.detect_arena(mem_ptr, chunksize)
         if arena:
             for u in arena.iter_usage():
                 yield u
@@ -564,7 +612,7 @@ def iter_usage():
         mem_ptr = chunk.as_mem()
         chunksize = chunk.chunksize()
         if chunk.is_inuse():
-            arena = pyarenas.as_py_arena(mem_ptr, chunksize)
+            arena = cached_state.detect_arena(mem_ptr, chunksize)
             if arena:
                 for u in arena.iter_usage():
                     yield u

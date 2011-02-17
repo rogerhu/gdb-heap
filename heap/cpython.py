@@ -3,7 +3,9 @@ This file is licensed under the PSF license
 '''
 import gdb
 from heap import WrappedPointer, caching_lookup_type, Usage, \
-    type_void_ptr, fmt_addr, Category, looks_like_ptr
+    type_void_ptr, fmt_addr, Category, looks_like_ptr, \
+    WrongInferiorProcess
+
 
 type_size_t = gdb.lookup_type('size_t')
 SIZEOF_VOID_P = type_void_ptr.sizeof
@@ -470,7 +472,7 @@ class ArenaObject(WrappedPointer):
             val_maxarenas = gdb.parse_and_eval('maxarenas')
         except RuntimeError:
             # Not linked against python, or no debug information:
-            return
+            raise WrongInferiorProcess('cpython')
 
         try:
             for i in xrange(val_maxarenas):
@@ -496,11 +498,11 @@ class ArenaObject(WrappedPointer):
         self.pool_address = self.field('pool_address')
 
 class ArenaDetection(object):
-    '''Detection of Python arenas, done as an object so that we can cache state'''
+    '''Detection of CPython arenas, done as an object so that we can cache state'''
     def __init__(self):
         self.arenaobjs = list(ArenaObject.iter_arenas())
 
-    def as_py_arena(self, ptr, chunksize):
+    def as_arena(self, ptr, chunksize):
         '''Detect if this ptr returned by malloc is in use as a Python arena,
         returning PyArenaPtr if it is, None if not'''
         # Fast rejection of too-small chunks:
