@@ -21,7 +21,7 @@
 
 import os
 import re
-import subprocess
+from subprocess import Popen, PIPE, call as subprocess_call
 import sys
 import unittest
 import random
@@ -33,8 +33,8 @@ else:
     _32bit = False
 
 try:
-    gdb_version, _ = subprocess.Popen(["gdb", "--version"],
-                                      stdout=subprocess.PIPE).communicate()
+    gdb_version, _ = Popen(["gdb", "--version"],
+                           stdout=PIPE).communicate()
 except OSError:
     # This is what "no gdb" looks like.  There may, however, be other
     # errors that manifest this way too.
@@ -46,8 +46,7 @@ if int(gdb_version_number.group(1)) < 7:
 
 # Verify that "gdb" was built with the embedded python support enabled:
 cmd = "--eval-command=python import sys; print sys.version_info"
-p = subprocess.Popen(["gdb", "--batch", cmd],
-                     stdout=subprocess.PIPE)
+p = Popen(["gdb", "--batch", cmd], stdout=PIPE)
 gdbpy_version, _ = p.communicate()
 if gdbpy_version == '':
     raise unittest.SkipTest("gdb not built with embedded python support")
@@ -131,7 +130,7 @@ class TestProgram(object):
         f.write(source)
         f.close()
         
-        c = subprocess.call([compiler,
+        c = subprocess_call([compiler,
 
                              # We want debug information:
                              '-g', 
@@ -158,13 +157,30 @@ class DebuggerTests(unittest.TestCase):
 
         Returns its stdout, stderr
         """
-        out, err = subprocess.Popen(
-            args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            ).communicate()
+        out, err = Popen(args, stdout=PIPE, stderr=PIPE).communicate()
         return out, err
 
 
+    def requires_binary(self, binary):
+        # Slightly complicated: gdb will look for the binary within the PWD
+        # as well as within the $PATH
+
+        if os.path.exists(binary):
+            # It's either an absolute or relative path, and directly exists:
+            return
+
+        p = Popen(['which', binary], stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
+        if p.returncode == 0:
+            # It's in the $PATH
+            return
+
+        raise unittest.SkipTest("%s not found" % binary)
+
     def command_test(self, progargs, commands, breakpoint=None):
+
+        self.requires_binary(progargs[0])
+
         # Run under gdb, hit the breakpoint, then run our "heap" command:
         commands =  [
             'python sys.path.append(".") ; import gdbheap'
