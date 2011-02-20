@@ -582,6 +582,10 @@ public:
         else:
             self.assertFoundCategory(heap_out, 'python', 'unicode')
 
+        # Ensure that the blocks of int allocations are detected:
+        if not py3k:
+            self.assertFoundCategory(heap_out, 'cpython', '_intblock', '')
+
         # Ensure that bytecode "strings" are marked as such:
         self.assertFoundCategory(heap_out, 'python', 'str', 'bytecode') # FIXME
 

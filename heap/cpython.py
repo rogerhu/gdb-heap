@@ -534,4 +534,20 @@ def python_categorization(usage_set):
     except RuntimeError:
         pass
         
+    # The Objects/intobject.c: block_list
+    try:
+        val_block_list = gdb.parse_and_eval('block_list')
+        if str(val_block_list.type.target()) != 'PyIntBlock':
+            raise RuntimeError
+        while long(val_block_list) != 0:
+            usage_set.set_addr_category(long(val_block_list),
+                                        Category('cpython', '_intblock', ''),
+                                        level=0)
+            val_block_list = val_block_list['next']
+
+    except RuntimeError:
+        pass
+
+    # The Objects/floatobject.c: block_list
+    # TODO: how to get at this? multiple vars named "block_list"
 
