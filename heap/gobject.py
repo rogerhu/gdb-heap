@@ -85,11 +85,12 @@ class GTypeInstancePtr(WrappedPointer):
                 # This requires, say, gtk2-debuginfo:
                 ptr_type = caching_lookup_type(typename).pointer()
                 addr = addr.cast(ptr_type)
-                print typename, addr.dereference()
-                if typename == 'GdkPixbuf':
-                    print 'GOT PIXELS', addr['pixels']
+                #print typename, addr.dereference()
+                #if typename == 'GdkPixbuf':
+                #    print 'GOT PIXELS', addr['pixels']
         except RuntimeError, e:
-            print addr, e
+            pass
+            #print addr, e
 
         WrappedPointer.__init__(self, addr)
         self.typenode = typenode
@@ -117,7 +118,8 @@ class GTypeInstancePtr(WrappedPointer):
 
 class GdkColormapPtr(GTypeInstancePtr):
     def categorize_refs(self, usage_set, level=0, detail=None):
-        print 'got here 46'
+        # print 'got here 46'
+        pass
         # GdkRgbInfo is stored as qdata on a GdkColormap
 
 class GdkImagePtr(GTypeInstancePtr):
@@ -156,7 +158,7 @@ class PangoCairoFcFontMapPtr(GTypeInstancePtr):
 
         # This is actually a "struct  FT_LibraryRec_", in FreeType's
         #   include/freetype/internal/ftobjs.h
-        print FT_Library._gdbval.dereference()
+        # print FT_Library._gdbval.dereference()
 
         usage_set.set_addr_category(FT_Library.as_address(),
                                     Category('FreeType', 'Library', ''),
