@@ -533,6 +533,9 @@ def python_categorization(usage_set):
                                     level=1)
     except RuntimeError:
         pass
+
+    # Various kinds of per-type optimized allocator
+    # See Modules/gcmodule.c:clear_freelists
         
     # The Objects/intobject.c: block_list
     try:
@@ -550,4 +553,25 @@ def python_categorization(usage_set):
 
     # The Objects/floatobject.c: block_list
     # TODO: how to get at this? multiple vars named "block_list"
+
+    # Objects/methodobject.c: PyCFunction_ClearFreeList
+    #   "free_list" of up to 256 PyCFunctionObject, but they're still of
+    #   that type
+
+    # Objects/classobject.c: PyMethod_ClearFreeList
+    #   "free_list" of up to 256 PyMethodObject, but they're still of that type
+
+    # Objects/frameobject.c: PyFrame_ClearFreeList
+    #   "free_list" of up to 300 PyFrameObject, but they're still of that type
+
+    # Objects/tupleobject.c: array of free_list: up to 2000 free tuples of each
+    # size from 1-20 (using ob_item[0] to chain up); singleton for size 0; they
+    # are still tuples when deallocated, though
+
+    # Objects/unicodeobject.c:
+    #   "free_list" of up to 1024 PyUnicodeObject, with the "str" buffer
+    #   optionally preserved also for lengths up to 9
+    #   They're all still of type "unicode" when free
+    #   Singletons for the empty unicode string, and for the first 256 code
+    #   points (Latin-1)
 
