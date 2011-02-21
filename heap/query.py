@@ -135,13 +135,12 @@ class Query(object):
         self.filter_ = filter_
 
     def __iter__(self):
-        from heap import iter_usage_with_progress, categorize_usage_list
+        from heap import iter_usage_with_progress, lazily_get_usage_list
+
         if True:
-            # 2-pass:
-            usage_list = list(iter_usage_with_progress())
-            categorize_usage_list(usage_list)
+            # 2-pass, but the expensive first pass may be cached
+            usage_list = lazily_get_usage_list()
             for u in usage_list:
-                u.ensure_category()
                 if self.filter_.eval_(u):
                     yield u
         else:

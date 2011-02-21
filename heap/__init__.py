@@ -445,6 +445,40 @@ class PythonCategorizer(object):
         # Not categorized:
         return False
 
+def _get_register_state():
+    from heap.compat import execute
+    return execute('thread apply all info registers')
+
+__cached_usage_list = None
+__cached_reg_state = None
+
+def lazily_get_usage_list():
+    '''Lazily do a full-graph categorization, getting a list of Usage instances'''
+    global __cached_usage_list
+    global __cached_reg_state
+
+    reg_state = _get_register_state()
+    # print 'reg_state', reg_state
+    if __cached_usage_list and __cached_reg_state:
+        # Verify that the inferior process hasn't changed state since the cache
+        # was populated.
+        # Something of a hack: verify that all registers have the same values:
+        if reg_state == __cached_reg_state:
+            # We can use the cache:
+            # print 'USING THE CACHE'
+            return __cached_usage_list
+
+    # print 'REGENERATING THE CACHE'
+
+    # Do the work:
+    usage_list = list(iter_usage_with_progress())
+    categorize_usage_list(usage_list)
+
+    # Update the cache:
+    __cached_usage_list = usage_list
+    __cached_reg_state = reg_state
+
+    return __cached_usage_list
 
 def categorize_usage_list(usage_list):
     '''Do a "full-graph" categorization of the given list of Usage instances
