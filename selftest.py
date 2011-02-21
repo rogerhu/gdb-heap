@@ -562,7 +562,8 @@ public:
                                 commands=['set breakpoint pending yes',
                                           'break builtin_id',
                                           'run',
-                                          'heap'],
+                                          'heap',
+                                          'heap select kind="PyListObject ob_item table"'],
                                 breakpoint='builtin_id')
 
         # Re-enable this for debugging:
@@ -570,6 +571,14 @@ public:
 
         tables = ParsedTable.parse_lines(out)
         heap_out = tables[0]
+
+        # Verify that "select" works for a category that's only detectable
+        # w.r.t. other categories:
+        select_out = tables[1]
+        # print select_out
+        self.assertHasRow(select_out,
+                          kvs = [('Domain', 'cpython'),
+                                 ('Kind', 'PyListObject ob_item table')])
         
         # Ensure that the code detected instances of various python types we
         # expect to be present:

@@ -135,11 +135,22 @@ class Query(object):
         self.filter_ = filter_
 
     def __iter__(self):
-        from heap import iter_usage_with_progress
-        for u in iter_usage_with_progress():
-            if self.filter_.eval_(u):
-                yield u
-
+        from heap import iter_usage_with_progress, categorize_usage_list
+        if True:
+            # 2-pass:
+            usage_list = list(iter_usage_with_progress())
+            categorize_usage_list(usage_list)
+            for u in usage_list:
+                u.ensure_category()
+                if self.filter_.eval_(u):
+                    yield u
+        else:
+            # 1-pass:
+            # This may miss blocks that are only categorized w.r.t. to other
+            # blocks:
+            for u in iter_usage_with_progress():
+                if self.filter_.eval_(u):
+                    yield u
 
 def do_query(args):
     from heap import fmt_addr, Table
