@@ -1,13 +1,13 @@
 '''
 This file is licensed under the PSF license
 '''
+import sys
 import gdb
 from heap import WrappedPointer, caching_lookup_type, Usage, \
     type_void_ptr, fmt_addr, Category, looks_like_ptr, \
-    WrongInferiorProcess
+    WrongInferiorProcess, Table
 
 
-type_size_t = gdb.lookup_type('size_t')
 SIZEOF_VOID_P = type_void_ptr.sizeof
 
 # Transliteration from Python's obmalloc.c:
@@ -260,6 +260,7 @@ class PyObjectPtr(WrappedPointer):
 # Taken from my libpython.py code in python's Tools/gdb/libpython.py
 # FIXME: ideally should share code somehow
 def _PyObject_VAR_SIZE(typeobj, nitems):
+    type_size_t = caching_lookup_type('size_t')
     return ( ( typeobj.field('tp_basicsize') +
                nitems * typeobj.field('tp_itemsize') +
                (SIZEOF_VOID_P - 1)
@@ -575,3 +576,26 @@ def python_categorization(usage_set):
     #   Singletons for the empty unicode string, and for the first 256 code
     #   points (Latin-1)
 
+# New gdb commands, specific to CPython
+
+from heap.commands import need_debuginfo
+
+class HeapCPythonAllocators(gdb.Command):
+    "For CPython: display information on the allocators"
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap cpython-allocators",
+                              gdb.COMMAND_DATA)
+
+    @need_debuginfo
+    def invoke(self, args, from_tty):
+        t = Table(columnheadings=('struct arena_object*', '256KB buffer location'))
+        for arena in ArenaObject.iter_arenas():
+            t.add_row([fmt_addr(arena.as_address()),
+                       fmt_addr(arena.address)])
+        print 'Objects/obmalloc.c: %i arenas' % len(t.rows)
+        t.write(sys.stdout)
+        print
+
+def register_commands():
+    HeapCPythonAllocators()

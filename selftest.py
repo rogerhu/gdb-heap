@@ -562,6 +562,7 @@ public:
                                 commands=['set breakpoint pending yes',
                                           'break builtin_id',
                                           'run',
+                                          'heap cpython-allocators',
                                           'heap',
                                           'heap select kind="PyListObject ob_item table"'],
                                 breakpoint='builtin_id')
@@ -570,11 +571,22 @@ public:
         # print out
 
         tables = ParsedTable.parse_lines(out)
-        heap_out = tables[0]
+
+        # Verify that "cpython-allocators" works:
+        allocators_out = tables[0]
+        self.assertEquals(allocators_out.colnames,
+                          ('struct arena_object*', '256KB buffer location'))
+
+        # print allocators_out
+        # self.assertHasRow(allocators_out,
+        #                  kvs = [('Domain', 'cpython'),
+        #                         ('Kind', 'PyListObject ob_item table')])
+
+        heap_out = tables[1]
 
         # Verify that "select" works for a category that's only detectable
         # w.r.t. other categories:
-        select_out = tables[1]
+        select_out = tables[2]
         # print select_out
         self.assertHasRow(select_out,
                           kvs = [('Domain', 'cpython'),

@@ -287,3 +287,6 @@ def register_commands():
 
     Hexdump()
 
+    from heap.cpython import register_commands as register_cpython_commands
+    register_cpython_commands()
+
