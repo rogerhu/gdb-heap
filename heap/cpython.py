@@ -589,10 +589,13 @@ class HeapCPythonAllocators(gdb.Command):
 
     @need_debuginfo
     def invoke(self, args, from_tty):
-        t = Table(columnheadings=('struct arena_object*', '256KB buffer location'))
+        t = Table(columnheadings=('struct arena_object*', '256KB buffer location', 'Free pools'))
         for arena in ArenaObject.iter_arenas():
             t.add_row([fmt_addr(arena.as_address()),
-                       fmt_addr(arena.address)])
+                       fmt_addr(arena.address),
+                       '%i / %i ' % (arena.field('nfreepools'),
+                                     arena.field('ntotalpools'))
+                       ])
         print 'Objects/obmalloc.c: %i arenas' % len(t.rows)
         t.write(sys.stdout)
         print

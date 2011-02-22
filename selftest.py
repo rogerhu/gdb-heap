@@ -575,7 +575,9 @@ public:
         # Verify that "cpython-allocators" works:
         allocators_out = tables[0]
         self.assertEquals(allocators_out.colnames,
-                          ('struct arena_object*', '256KB buffer location'))
+                          ('struct arena_object*',
+                           '256KB buffer location',
+                           'Free pools'))
 
         # print allocators_out
         # self.assertHasRow(allocators_out,
