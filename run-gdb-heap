@@ -1,0 +1,9 @@
+#!/bin/bash
+# Handy script for launching a program under gdb, whilst wiring up gdb to use
+# the working copy of gdb-heap
+# Typical usage:
+#   ./run-gdb-heap python
+PYTHONPATH=$(PWD) \
+  gdb \
+  --eval-command="python import gdbheap" \
+  --args $*
