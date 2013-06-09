@@ -636,8 +636,8 @@ class CachedInferiorState(object):
 
 def iter_usage():
     # Iterate through glibc, and within that, within Python arena blocks, as appropriate
-    from heap.glibc import get_ms
-    ms = get_ms()
+    from heap.glibc import glibc_arenas
+    ms = glibc_arenas.get_ms()
 
     cached_state = CachedInferiorState()
 
@@ -669,6 +669,7 @@ def iter_usage():
     for chunk in ms.iter_sbrk_chunks():
         mem_ptr = chunk.as_mem()
         chunksize = chunk.chunksize()
+
         if chunk.is_inuse():
             arena = cached_state.detect_arena(mem_ptr, chunksize)
             if arena:

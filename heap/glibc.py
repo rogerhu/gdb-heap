@@ -249,7 +249,6 @@ class MallocState(WrappedValue):
 
 
 
-
     def iter_free_chunks(self):
         '''Yield a sequence of MChunkPtr (some of which may be MFastBinPtr),
         corresponding to the free chunks of memory'''
@@ -412,11 +411,39 @@ def iter_mmap_heap_chunks(pid):
         else:
             print 'unmatched :', line
 
+class GlibcArenas(object):
+    def __init__(self):
+        self.main_arena = self.get_main_arena()
+        self.cur_arena = self.get_ms(self.main_arena)
+        self.get_arenas()
 
-def get_ms(arena=None):
-    if not arena:
-        arena = gdb.parse_and_eval("main_arena")
+    def get_main_arena(self):
+        return gdb.parse_and_eval("main_arena")
 
-    ms = MallocState(arena)
-    return ms
+    def get_ms(self, arena_dereference=None):
+        if arena_dereference:
+            ms = MallocState(arena_dereference)
+        else:
+            ms = self.cur_arena
 
+        return ms
+
+    def get_arenas(self):
+        ar_ptr = self.get_ms(self.main_arena)
+
+        self.arenas = []
+        while True:
+            self.arenas.append(ar_ptr)
+
+            if ar_ptr.address != ar_ptr.field('next'):
+                ar_ptr = self.get_ms(ar_ptr.field('next').dereference())
+
+            if ar_ptr.address == self.main_arena.address:
+                return
+
+            if ar_ptr.address != ar_ptr.field('next'):
+                ar_ptr = self.get_ms(ar_ptr.field('next').dereference())
+
+
+
+glibc_arenas = GlibcArenas()
