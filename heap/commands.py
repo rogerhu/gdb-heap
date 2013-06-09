@@ -274,7 +274,7 @@ class Hexdump(gdb.Command):
             addr += size
 
 class HeapArenas(gdb.Command):
-    'Print a report on memory usage, by category'
+    'Display heap arenas available'
     def __init__(self):
         gdb.Command.__init__ (self,
                               "heap arenas",
