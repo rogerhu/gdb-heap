@@ -17,12 +17,11 @@ sudo apt-get install python-ply
 The original forked version assumes an "import gdb" module, which resides in
 "/usr/share/glib-2.0/gdb" and part of the libglib2.0-dev package.
 
-There is also a conflict with the python-gobject-2 library, which are deprecated Python
-bindings for the GObject library.  This package installs a glib/ directory inside
-/usr/lib/python2.7/dist-packages/glib/option.py, which many Gtk-related modules depend.
-You may need to rename this directory before running this system.
-=======
-```
+There is also a conflict with the python-gobject-2 library, which are deprecated
+Python bindings for the GObject library.  This package installs a glib/
+directory inside /usr/lib/python2.7/dist-packages/glib/option.py, which many
+Gtk-related modules depend.  You may need to rename this directory before
+running this system.
 
 You'll also want to install python-dbg since the package comes with the
 debugging symbols for the stock Python 2.7, as well as a python-dbg binary
