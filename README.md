@@ -12,7 +12,6 @@ sudo apt-get install libc6-dev
 sudo apt-get install python-gi
 sudo apt-get install libglib2.0-dev
 sudo apt-get install python-ply
-sudo apt-get install libc6-dbg
 ```
 
 The original forked version assumes an "import gdb" module, which resides in
@@ -22,6 +21,22 @@ There is also a conflict with the python-gobject-2 library, which are deprecated
 bindings for the GObject library.  This package installs a glib/ directory inside
 /usr/lib/python2.7/dist-packages/glib/option.py, which many Gtk-related modules depend.
 You may need to rename this directory before running this system.
+=======
+```
+
+You'll also want to install python-dbg since the package comes with the
+debugging symbols for the stock Python 2.7, as well as a python-dbg binary
+compiled with the --with-pydebug option that will only work with C extensions
+modules compiled with the /usr/include/python2.7_d headers.
+
+Also, gdb-heap assumes an "import gdb" module, which corresponds to the modules
+stored in "/usr/share/glib-2.0/gdb" as part of the libglib2.0-dev package.
+
+There is also a conflict with the python-gobject-2 library, which are deprecated
+Python bindings for the GObject library.  This package installs a glib/
+directory inside /usr/lib/python2.7/dist-packages/glib/option.py, which many
+Gtk-related modules depend.  You may need to rename this directory before
+running this system.
 
 2. Create a file that will help automate the loading of the gdbheap library:
 
@@ -32,12 +47,22 @@ python
 import sys
 sys.path.append("/usr/share/glib-2.0/gdb")
 sys.path.append("/home/rhu/projects/gdb-heap")
-sys.path.append("/home/rhu/projects/libheap")
 import gdbheap
 end
 ```
 
 To run, you can execute as follows:
 
+```bash
 sudo gdb -p 7458 -x ~/gdb-heap-commands
+```
+
+Useful resources
+----------------
+
+ * http://blip.tv/pycon-us-videos-2009-2010-2011/pycon-2011-dude-where-s-my-ram-a-deep-dive-into-how-python-uses-memory-4896725 (Dude - Where's My RAM?  A deep dive in how Python uses memory - David Malcom's PyCon 2011 video talk)
+
+ * http://dmalcolm.fedorapeople.org/presentations/PyCon-US-2011/GdbPythonPresentation/GdbPython.html (David Malcom's PyCon 2011 slides)
+
+ * http://code.woboq.org/userspace/glibc/malloc/malloc.c.html (malloc.c.html implementation)
 
