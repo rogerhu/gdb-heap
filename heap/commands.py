@@ -67,7 +67,7 @@ class Heap(gdb.Command):
                     count_by_category[u.category] += 1
                 else:
                     count_by_category[u.category] = 1
-                    
+
         except KeyboardInterrupt:
             pass # FIXME
 
@@ -122,7 +122,7 @@ class HeapSizes(gdb.Command):
                        fmt_size(chunks_by_size[size] * size)])
         t.add_row(['TOTALS', num_chunks, fmt_size(total_size)])
         t.write(sys.stdout)
-        print        
+        print
 
 
 class HeapUsed(gdb.Command):
@@ -146,9 +146,9 @@ class HeapUsed(gdb.Command):
             category = categorize(u, None)
             hd = hexdump_as_bytes(mem, 32)
             print ('%6i: %s -> %s %8i bytes %20s |%s'
-                   % (i, 
-                      fmt_addr(chunk.as_mem()), 
-                      fmt_addr(chunk.as_mem()+size-1), 
+                   % (i,
+                      fmt_addr(chunk.as_mem()),
+                      fmt_addr(chunk.as_mem()+size-1),
                       size, category, hd))
         print
 
@@ -170,9 +170,9 @@ class HeapAll(gdb.Command):
                 kind = ' inuse'
             else:
                 kind = ' free'
-            
+
             print ('%i: %s -> %s %s: %i bytes (%s)'
-                   % (i, 
+                   % (i,
                       fmt_addr(chunk.as_address()),
                       fmt_addr(chunk.as_address()+size-1),
                       kind, size, chunk))
@@ -264,14 +264,37 @@ class Hexdump(gdb.Command):
         if args.startswith('0x'):
             addr = int(args, 16)
         else:
-            addr = int(args)            
-            
+            addr = int(args)
+
         # assume that paging will cut in and the user will quit at some point:
         size = 32
         while True:
             hd = hexdump_as_bytes(addr, size)
             print ('%s -> %s %s' % (fmt_addr(addr),  fmt_addr(addr + size -1), hd))
             addr += size
+
+class HeapArenas(gdb.Command):
+    'Print a report on memory usage, by category'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap arenas",
+                              gdb.COMMAND_DATA)
+
+    @need_debuginfo
+    def invoke(self, args, from_tty):
+        ar_ptr = main_arena = get_ms()
+
+        arena_cnt = 1
+
+        while True:
+            print "Arena #%d: %s" % (arena_cnt, ar_ptr.address)
+
+            arena_cnt += 1
+            if ar_ptr.address != ar_ptr.field('next'):
+                ar_ptr = get_ms(ar_ptr.field('next').dereference())
+
+            if ar_ptr.address == main_arena.address:
+                return
 
 
 def register_commands():
@@ -284,7 +307,7 @@ def register_commands():
     HeapLabel()
     HeapDiff()
     HeapSelect()
-
+    HeapArenas()
     Hexdump()
 
     from heap.cpython import register_commands as register_cpython_commands

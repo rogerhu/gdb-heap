@@ -32,7 +32,7 @@ from heap import WrappedPointer, WrappedValue, caching_lookup_type, \
 
 class MChunkPtr(WrappedPointer):
     '''Wrapper around glibc's mchunkptr
-    
+
     Note:
       as_address() gives the address of the chunk as seen by the malloc implementation
       as_mem() gives the address as seen by the user of malloc'''
@@ -87,7 +87,7 @@ class MChunkPtr(WrappedPointer):
         return self.has_flag(self.NON_MAIN_ARENA)
 
     def __str__(self):
-        result = ('<%s chunk=0x%x mem=0x%x' 
+        result = ('<%s chunk=0x%x mem=0x%x'
                   % (self.__class__.__name__,
                      self.as_address(),
                      self.as_mem()))
@@ -122,7 +122,7 @@ class MChunkPtr(WrappedPointer):
         #   ((((mchunkptr)(((char*)(p))+((p)->size & ~SIZE_BITS)))->size) & PREV_INUSE)
         nc = self.next_chunk()
         return nc.has_PREV_INUSE()
-        
+
     def next_chunk(self):
         # Analog of:
         #   #define next_chunk(p) ((mchunkptr)( ((char*)(p)) + ((p)->size & ~SIZE_BITS) ))
@@ -266,7 +266,7 @@ class MallocState(WrappedValue):
                 # FIXME: untested
                 yield MChunkPtr(p)
                 p = p.field('fd') # FIXME: wrap
-                
+
         #   for (p = fastbin (av, i); p != 0; p = p->fd) {
         #     ++nfastblocks;
         #     fastavail += chunksize(p);
@@ -333,29 +333,29 @@ def sbrk_base():
 #      INTERNAL_SIZE_T fastavail;
 #      int nblocks;
 #      int nfastblocks;
-#    
+#
 #      /* Ensure initialization */
 #      if (av->top == 0)  malloc_consolidate(av);
-#    
+#
 #      check_malloc_state(av);
-#    
+#
 #      /* Account for top */
 #      avail = chunksize(av->top);
 #      nblocks = 1;  /* top always exists */
-#    
+#
 #      /* traverse fastbins */
 #      nfastblocks = 0;
 #      fastavail = 0;
-#    
+#
 #      for (i = 0; i < NFASTBINS; ++i) {
 #        for (p = fastbin (av, i); p != 0; p = p->fd) {
 #          ++nfastblocks;
 #          fastavail += chunksize(p);
 #        }
 #      }
-#    
+#
 #      avail += fastavail;
-#    
+#
 #      /* traverse regular bins */
 #      for (i = 1; i < NBINS; ++i) {
 #        b = bin_at(av, i);
@@ -364,7 +364,7 @@ def sbrk_base():
 #          avail += chunksize(p);
 #        }
 #      }
-#    
+#
 #      mi.smblks = nfastblocks;
 #      mi.ordblks = nblocks;
 #      mi.fordblks = avail;
@@ -377,13 +377,13 @@ def sbrk_base():
 #      mi.usmblks = mp_.max_total_mem;
 #      return mi;
 #    }
-#    
+#
 
 
 def iter_mmap_heap_chunks(pid):
     '''Try to locate the memory-mapped heap allocations for the given
     process (by PID) by reading /proc/PID/maps
-    
+
     Yield a sequence of (start, end) pairs'''
     for line in open('/proc/%i/maps' % pid):
         # print line,
@@ -413,8 +413,10 @@ def iter_mmap_heap_chunks(pid):
             print 'unmatched :', line
 
 
-def get_ms():
-    val_main_arena = gdb.parse_and_eval('main_arena')
-    ms = MallocState(val_main_arena)
-    return ms        
+def get_ms(arena=None):
+    if not arena:
+        arena = gdb.parse_and_eval("main_arena")
+
+    ms = MallocState(arena)
+    return ms
 

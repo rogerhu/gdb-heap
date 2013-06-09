@@ -119,6 +119,30 @@ class WrappedValue(object):
     def __str__(self):
         return str(self._gdbval)
 
+    # See http://sourceware.org/gdb/onlinedocs/gdb/Values-From-Inferior.html#Values-From-Inferior
+    @property
+    def address(self):
+        return self._gdbval.address
+
+    @property
+    def is_optimized_out(self):
+        return self._gdbval.is_optimized_out
+
+    @property
+    def type(self):
+        return self._gdbval.type
+
+    @property
+    def dynamic_type(self):
+        return self._gdbval.dynamic_type
+
+    @property
+    def is_lazy(self):
+        return self._gdbval.is_lazy
+
+    def dereference(self):
+        return WrappedValue(self._gdbval.dereference())
+
 #    def address(self):
 #        return long(self._gdbval.cast(type_void_ptr))
 
@@ -176,9 +200,9 @@ def sign(amt):
 class Category(namedtuple('Category', ('domain', 'kind', 'detail'))):
     '''
     Categorization of an in-use area of memory
-    
+
       domain: high-level grouping e.g. "python", "C++", etc
-    
+
       kind: type information, appropriate to the domain e.g. a class/type
 
         Domain     Meaning of 'kind'
@@ -187,7 +211,7 @@ class Category(namedtuple('Category', ('domain', 'kind', 'detail'))):
         'python'   the python class
         'cpython'  C structure/type (implementation detail within Python)
         'pyarena'  Python memory allocator
-    
+
       detail: additional detail
     '''
 
@@ -212,7 +236,7 @@ class Usage(object):
         self.level = level
         self.hd = hd
         self.obj = obj
-        
+
     def __repr__(self):
         result = 'Usage(%s, %s' % (hex(self.start), hex(self.size))
         if self.category:
@@ -240,7 +264,7 @@ def hexdump_as_bytes(addr, size):
         b = int(ptr.dereference())
         bytebuf.append(b)
     return (' '.join(['%02x' % b for b in bytebuf])
-            + ' |' 
+            + ' |'
             + ''.join([as_hexdump_char(b) for b in bytebuf])
             + '|')
 
@@ -256,7 +280,7 @@ def hexdump_as_long(addr, count):
         for i in range(sizeof_ptr):
             bytebuf.append(int((bptr + i).dereference()))
     return (' '.join([fmt_addr(long) for long in longbuf])
-            + ' |' 
+            + ' |'
             + ''.join([as_hexdump_char(b) for b in bytebuf])
             + '|')
 
@@ -272,7 +296,7 @@ class Table(object):
     def add_row(self, row):
         assert len(row) == self.numcolumns
         self.rows.append(row)
-        
+
     def write(self, out):
         colwidths = self._calc_col_widths()
 
@@ -339,7 +363,7 @@ class UsageSet(object):
                            % (addr, u.category, u.level))
                 return False
             u.category = category
-            u.level = level            
+            u.level = level
             return True
         else:
             if debug:
@@ -408,7 +432,7 @@ class PythonCategorizer(object):
             for fieldname, catname, fn in (('db', 'sqlite3', categorize_sqlite3),
                                            ('st', 'sqlite3_stmt', None)):
                 field_ptr = long(obj_ptr[fieldname])
-                
+
                 # sqlite's src/mem1.c adds a a sqlite3_int64 (size) to the front
                 # of the allocation, so we need to look 8 bytes earlier to find
                 # the malloc-ed region:
@@ -605,11 +629,11 @@ class CachedInferiorState(object):
             arena = detector.as_arena(ptr, chunksize)
             if arena:
                 return arena
-                
+
         # Not found:
         return None
 
-        
+
 def iter_usage():
     # Iterate through glibc, and within that, within Python arena blocks, as appropriate
     from heap.glibc import get_ms
@@ -653,8 +677,8 @@ def iter_usage():
             else:
                 yield Usage(long(mem_ptr), chunksize)
 
-            
-    
+
+
 def looks_like_ptr(value):
     '''Does this gdb.Value pointer's value looks reasonable?
 
