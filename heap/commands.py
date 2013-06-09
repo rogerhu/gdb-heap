@@ -285,6 +285,20 @@ class HeapArenas(gdb.Command):
         for n, arena in enumerate(glibc_arenas.arenas):
             print "Arena #%d: %s" % (n, arena.address)
 
+class HeapArenaSelect(gdb.Command):
+    'Select heap arena'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap arena",
+                              gdb.COMMAND_DATA)
+
+    @need_debuginfo
+    def invoke(self, args, from_tty):
+        arena_num = int(args)
+
+        glibc_arenas.cur_arena = glibc_arenas.arenas[arena_num]
+        print "Arena set to %s" % glibc_arenas.cur_arena.address
+
 
 
 def register_commands():
@@ -298,6 +312,7 @@ def register_commands():
     HeapDiff()
     HeapSelect()
     HeapArenas()
+    HeapArenaSelect()
     Hexdump()
 
     from heap.cpython import register_commands as register_cpython_commands
