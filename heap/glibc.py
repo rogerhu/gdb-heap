@@ -441,9 +441,6 @@ class GlibcArenas(object):
             if ar_ptr.address == self.main_arena.address:
                 return
 
-            if ar_ptr.address != ar_ptr.field('next'):
-                ar_ptr = self.get_ms(ar_ptr.field('next').dereference())
-
 
 
 glibc_arenas = GlibcArenas()
