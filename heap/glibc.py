@@ -233,8 +233,15 @@ class MallocState(WrappedValue):
         # So if we know the address of the first chunk, then we can use this to iterate upwards through RAM,
         # and thus iterate over all of the chunks
 
-        # Start at "mp_.sbrk_base"
-        chunk = MChunkPtr(gdb.Value(sbrk_base()).cast(MChunkPtr.gdb_type()))
+        # To support multiple arenas, we must use this calculation to derive it instead of relying on mp_.sbrk_base.
+        # (gdb) print (char *)main_arena->top + (main_arena->top->size & ~(0x4 | 0x2 | 0x1)) - main_arena->system_mem
+        #
+        arena = glibc_arenas.cur_arena
+        arena_top = arena.field('top')
+        m_arena_top = MChunkPtr(arena_top)
+        base = arena_top.cast(type_char_ptr) + gdb.Value(m_arena_top.chunksize()) - arena.field('system_mem')
+        chunk = MChunkPtr(base.cast(MChunkPtr.gdb_type()))
+
         # sbrk_base is NULL when no small allocations have happened:
         if chunk.as_address() > 0:
             # Iterate upwards until you reach "top":
@@ -246,8 +253,6 @@ class MallocState(WrappedValue):
                     chunk = chunk.next_chunk()
                 except RuntimeError:
                     break
-
-
 
     def iter_free_chunks(self):
         '''Yield a sequence of MChunkPtr (some of which may be MFastBinPtr),
@@ -440,7 +445,5 @@ class GlibcArenas(object):
 
             if ar_ptr.address == self.main_arena.address:
                 return
-
-
 
 glibc_arenas = GlibcArenas()
