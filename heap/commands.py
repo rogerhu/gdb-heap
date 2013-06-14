@@ -18,7 +18,7 @@ import gdb
 import re
 import sys
 
-from heap.glibc import get_ms
+from heap.glibc import glibc_arenas
 from heap.history import history, Snapshot, Diff
 
 from heap import lazily_get_usage_list, \
@@ -97,7 +97,7 @@ class HeapSizes(gdb.Command):
                               gdb.COMMAND_DATA)
     @need_debuginfo
     def invoke(self, args, from_tty):
-        ms = get_ms()
+        ms = glibc_arenas.get_ms()
         chunks_by_size = {}
         num_chunks = 0
         total_size = 0
@@ -136,7 +136,7 @@ class HeapUsed(gdb.Command):
     def invoke(self, args, from_tty):
         print 'Used chunks of memory on heap'
         print '-----------------------------'
-        ms = get_ms()
+        ms = glibc_arenas.get_ms()
         for i, chunk in enumerate(ms.iter_chunks()):
             if not chunk.is_inuse():
                 continue
@@ -163,7 +163,7 @@ class HeapAll(gdb.Command):
     def invoke(self, args, from_tty):
         print 'All chunks of memory on heap (both used and free)'
         print '-------------------------------------------------'
-        ms = get_ms()
+        ms = glibc_arenas.get_ms()
         for i, chunk in enumerate(ms.iter_chunks()):
             size = chunk.chunksize()
             if chunk.is_inuse():
@@ -282,19 +282,23 @@ class HeapArenas(gdb.Command):
 
     @need_debuginfo
     def invoke(self, args, from_tty):
-        ar_ptr = main_arena = get_ms()
+        for n, arena in enumerate(glibc_arenas.arenas):
+            print "Arena #%d: %s" % (n, arena.address)
 
-        arena_cnt = 1
+class HeapArenaSelect(gdb.Command):
+    'Select heap arena'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap arena",
+                              gdb.COMMAND_DATA)
 
-        while True:
-            print "Arena #%d: %s" % (arena_cnt, ar_ptr.address)
+    @need_debuginfo
+    def invoke(self, args, from_tty):
+        arena_num = int(args)
 
-            arena_cnt += 1
-            if ar_ptr.address != ar_ptr.field('next'):
-                ar_ptr = get_ms(ar_ptr.field('next').dereference())
+        glibc_arenas.cur_arena = glibc_arenas.arenas[arena_num]
+        print "Arena set to %s" % glibc_arenas.cur_arena.address
 
-            if ar_ptr.address == main_arena.address:
-                return
 
 
 def register_commands():
@@ -308,6 +312,7 @@ def register_commands():
     HeapDiff()
     HeapSelect()
     HeapArenas()
+    HeapArenaSelect()
     Hexdump()
 
     from heap.cpython import register_commands as register_cpython_commands
