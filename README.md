@@ -9,33 +9,26 @@ Installation instructions
 
 ```
 sudo apt-get install libc6-dev
+sudo apt-get install libc6-dbg
 sudo apt-get install python-gi
 sudo apt-get install libglib2.0-dev
 sudo apt-get install python-ply
 ```
 
 The original forked version assumes an "import gdb" module, which resides in
-"/usr/share/glib-2.0/gdb" and part of the libglib2.0-dev package.
+"/usr/share/glib-2.0/gdb" as part of the libglib2.0-dev package.
 
 There is also a conflict with the python-gobject-2 library, which are deprecated
 Python bindings for the GObject library.  This package installs a glib/
 directory inside /usr/lib/python2.7/dist-packages/glib/option.py, which many
-Gtk-related modules depend.  You may need to rename this directory before
-running this system.
+Gtk-related modules depend.  You will therefore need to make sure the sys.path
+for /usr/share/glib-2.0/gdb is declared first for this reason (see code
+example).
 
 You'll also want to install python-dbg since the package comes with the
 debugging symbols for the stock Python 2.7, as well as a python-dbg binary
 compiled with the --with-pydebug option that will only work with C extensions
 modules compiled with the /usr/include/python2.7_d headers.
-
-Also, gdb-heap assumes an "import gdb" module, which corresponds to the modules
-stored in "/usr/share/glib-2.0/gdb" as part of the libglib2.0-dev package.
-
-There is also a conflict with the python-gobject-2 library, which are deprecated
-Python bindings for the GObject library.  This package installs a glib/
-directory inside /usr/lib/python2.7/dist-packages/glib/option.py, which many
-Gtk-related modules depend.  You may need to rename this directory before
-running this system.
 
 2. Create a file that will help automate the loading of the gdbheap library:
 
@@ -44,6 +37,7 @@ gdb-heap-commands:
 ```
 python
 import sys
+sys.path.insert(0, "/usr/share/glib-2.0/gdb")
 sys.path.append("/usr/share/glib-2.0/gdb")
 sys.path.append("/home/rhu/projects/gdb-heap")
 import gdbheap
@@ -65,3 +59,4 @@ Useful resources
 
  * http://code.woboq.org/userspace/glibc/malloc/malloc.c.html (malloc.c.html implementation)
 
+ * Malloc per-thread arenas in glibc (http://siddhesh.in/journal/2012/10/24/malloc-per-thread-arenas-in-glibc/)
