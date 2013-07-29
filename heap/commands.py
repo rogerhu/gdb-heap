@@ -164,8 +164,10 @@ class HeapFree(gdb.Command):
         print 'Free chunks of memory on heap'
         print '-----------------------------'
         ms = glibc_arenas.get_ms()
+        total_size = 0
         for i, chunk in enumerate(ms.iter_free_chunks()):
             size = chunk.chunksize()
+            total_size += size
             mem = chunk.as_mem()
             u = Usage(mem, size)
             category = categorize(u, None)
@@ -176,7 +178,7 @@ class HeapFree(gdb.Command):
                       fmt_addr(chunk.as_mem()),
                       fmt_addr(chunk.as_mem()+size-1),
                       size, category, hd))
-        print
+        print "Total size: %s" % total_size
 
 
 class HeapAll(gdb.Command):
