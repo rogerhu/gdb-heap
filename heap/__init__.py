@@ -256,17 +256,21 @@ class Usage(object):
             self.hd = hexdump_as_bytes(self.start, NUM_HEXDUMP_BYTES)
 
 
-def hexdump_as_bytes(addr, size):
+def hexdump_as_bytes(addr, size, chars_only=True):
     addr = gdb.Value(addr).cast(type_unsigned_char_ptr)
     bytebuf = []
     for j in range(size):
         ptr = addr + j
         b = int(ptr.dereference())
         bytebuf.append(b)
-    return (' '.join(['%02x' % b for b in bytebuf])
-            + ' |'
-            + ''.join([as_hexdump_char(b) for b in bytebuf])
-            + '|')
+
+    result = ''
+    if not chars_only:
+        result += ' '.join(['%02x' % b for b in bytebuf]) + ' |'
+    result += ''.join([as_hexdump_char(b) for b in bytebuf])
+    result += '|'
+
+    return (result)
 
 def hexdump_as_long(addr, count):
     addr = gdb.Value(addr).cast(caching_lookup_type('unsigned long').pointer())
