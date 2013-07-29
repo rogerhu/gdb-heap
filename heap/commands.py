@@ -152,6 +152,33 @@ class HeapUsed(gdb.Command):
                       size, category, hd))
         print
 
+class HeapFree(gdb.Command):
+    'Print free heap chunks'
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap free",
+                              gdb.COMMAND_DATA)
+
+    @need_debuginfo
+    def invoke(self, args, from_tty):
+        print 'Free chunks of memory on heap'
+        print '-----------------------------'
+        ms = glibc_arenas.get_ms()
+        for i, chunk in enumerate(ms.iter_free_chunks()):
+            size = chunk.chunksize()
+            mem = chunk.as_mem()
+            u = Usage(mem, size)
+            category = categorize(u, None)
+            hd = hexdump_as_bytes(mem, 32)
+
+            print ('%6i: %s -> %s %8i bytes %20s |%s'
+                   % (i,
+                      fmt_addr(chunk.as_mem()),
+                      fmt_addr(chunk.as_mem()+size-1),
+                      size, category, hd))
+        print
+
+
 class HeapAll(gdb.Command):
     'Print all heap chunks'
     def __init__(self):
@@ -306,6 +333,7 @@ def register_commands():
     Heap()
     HeapSizes()
     HeapUsed()
+    HeapFree()
     HeapAll()
     HeapLog()
     HeapLabel()
