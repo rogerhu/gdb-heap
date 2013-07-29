@@ -87,7 +87,7 @@ def offsetof(typename, fieldname):
     t = caching_lookup_type(typename).pointer()
     v = gdb.Value(0)
     v = v.cast(t)
-    field = v[fieldname].cast(_type_void_ptr)
+    field = v[fieldname].cast(type_void_ptr)
     return long(field.address)
 
 class MissingDebuginfo(RuntimeError):
