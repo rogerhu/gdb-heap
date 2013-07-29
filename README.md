@@ -49,6 +49,20 @@ To run, you can execute as follows:
 ```bash
 sudo gdb -p 7458 -x ~/gdb-heap-commands
 ```
+Commands to run
+---------------
+heap - print a report on memory usage, by category
+heap sizes - print a report on memory usage, by sizes
+heap used - print used heap chunks
+heap free - print free heap chunks
+heap all - print all heap chunks
+heap log - print a log of recorded heap states
+heap label - record the current state of the heap for later comparison
+heap diff - compare two states of the heap
+heap select - query used heap chunks
+hexdump <addr> - print a hexdump, stating at the specific region of memory
+heap arenas - print glibs arenas
+heap arena <arena> - select glibc arena number
 
 Useful resources
 ----------------
