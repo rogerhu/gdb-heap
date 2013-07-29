@@ -60,3 +60,5 @@ Useful resources
  * http://code.woboq.org/userspace/glibc/malloc/malloc.c.html (malloc.c.html implementation)
 
  * Malloc per-thread arenas in glibc (http://siddhesh.in/journal/2012/10/24/malloc-per-thread-arenas-in-glibc/)
+
+ * Understanding the heap by breaking it (http://www.blackhat.com/presentations/bh-usa-07/Ferguson/Whitepaper/bh-usa-07-ferguson-WP.pdf)
