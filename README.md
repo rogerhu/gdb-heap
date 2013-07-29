@@ -44,13 +44,32 @@ import gdbheap
 end
 ```
 
-To run, you can execute as follows:
+To attach to an existing process, you can execute as follows:
 
 ```bash
 sudo gdb -p 7458 -x ~/gdb-heap-commands
 ```
+
+To take a core dump of a process, you can do the following:
+
+```
+1) sudo gdb -p <pid>
+2) Type "generate-core-file" at the GDB prompt.
+3) Wait awhile (and be careful not to hit enter again, since it will repeat the same command)
+4) Copy the core.<pid> file somewhere.
+```
+
+You can then use gdb to attach to this core file:
+
+```bash
+sudo gdb python <core file> -x ~/gdb-heap-commands
+```
+
+
 Commands to run
 ---------------
+
+```
 heap - print a report on memory usage, by category
 heap sizes - print a report on memory usage, by sizes
 heap used - print used heap chunks
@@ -63,6 +82,7 @@ heap select - query used heap chunks
 hexdump <addr> - print a hexdump, stating at the specific region of memory
 heap arenas - print glibs arenas
 heap arena <arena> - select glibc arena number
+```
 
 Useful resources
 ----------------
