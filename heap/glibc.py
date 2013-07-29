@@ -28,7 +28,7 @@ import re
 import gdb
 
 from heap import WrappedPointer, WrappedValue, caching_lookup_type, \
-    type_char_ptr, check_missing_debuginfo
+    type_char_ptr, check_missing_debuginfo, array_length, offsetof
 
 class MChunkPtr(WrappedPointer):
     '''Wrapper around glibc's mchunkptr
@@ -262,9 +262,8 @@ class MallocState(WrappedValue):
             print 'fastbin %i' % i
             p = self.fastbin(i)
             while not p.is_null():
-                # FIXME: untested
-                yield MChunkPtr(p)
-                p = p.field('fd') # FIXME: wrap
+                yield p
+                p = MFastBinPtr(p.field('fd'))
 
         #   for (p = fastbin (av, i); p != 0; p = p->fd) {
         #     ++nfastblocks;
