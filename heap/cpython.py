@@ -11,7 +11,7 @@ from heap import WrappedPointer, caching_lookup_type, Usage, \
 SIZEOF_VOID_P = type_void_ptr.sizeof
 
 # Transliteration from Python's obmalloc.c:
-ALIGNMENT             = 8	
+ALIGNMENT             = 8
 ALIGNMENT_SHIFT       = 3
 ALIGNMENT_MASK        = (ALIGNMENT - 1)
 
@@ -53,7 +53,7 @@ class PyArenaPtr(WrappedPointer):
         if self.excess != 0:
             self.num_pools -= 1
             self.initial_pool_addr += POOL_SIZE - self.excess
-        
+
     def __str__(self):
         return ('PyArenaPtr([%s->%s], %i pools [%s->%s], excess: %i tracked by %s)'
                 % (fmt_addr(self.as_address()),
@@ -99,7 +99,7 @@ class PyArenaPtr(WrappedPointer):
         # if self.excess != 0:
         #    # FIXME: this address is wrong
         #    yield Usage(self.as_address(), self.excess, Category('pyarena', 'alignment wastage'))
-        
+
 
 class PyPoolPtr(WrappedPointer):
     # Wrapper around Python's obmalloc.c: poolp: (struct pool_header *)
@@ -114,7 +114,7 @@ class PyPoolPtr(WrappedPointer):
         return ('PyPoolPtr([%s->%s: %d blocks of size %i bytes))'
                 % (fmt_addr(self.as_address()), fmt_addr(self.as_address() + POOL_SIZE - 1),
                    self.num_blocks(), self.block_size()))
-        
+
     @classmethod
     def gdb_type(cls):
         # Deferred lookup of the "poolp" type:
@@ -134,12 +134,12 @@ class PyPoolPtr(WrappedPointer):
 
     def _maxnextoffset(self):
         return POOL_SIZE - self.block_size()
-        
+
     def iter_blocks(self):
         '''Yield all blocks within this pool, whether free or in use'''
         size = self.block_size()
         maxnextoffset = self._maxnextoffset()
-        # print initnextoffset, maxnextoffset        
+        # print initnextoffset, maxnextoffset
         offset = self._firstoffset()
         base_addr = self.as_address()
         while offset <= maxnextoffset:
@@ -420,7 +420,7 @@ def is_pyobject_ptr(addr):
 
     except (RuntimeError, UnicodeDecodeError):
         pass # Not a python object (or corrupt)
-    
+
     # Doesn't look like a python object, implicit return None
 
 def obj_addr_to_gc_addr(addr):
@@ -488,12 +488,14 @@ class ArenaObject(WrappedPointer):
             # For now, ignore it:
             return
 
+    @property  # need to override the base property
+    def address(self):
+        return self.field('address')
+
     def __init__(self, gdbval):
         WrappedPointer.__init__(self, gdbval)
 
         # Cache some values:
-        self.address = self.field('address')
-
         # This is the high-water mark: at this point and beyond, the bytes of
         # memory are untouched since malloc:
         self.pool_address = self.field('pool_address')
@@ -537,7 +539,7 @@ def python_categorization(usage_set):
 
     # Various kinds of per-type optimized allocator
     # See Modules/gcmodule.c:clear_freelists
-        
+
     # The Objects/intobject.c: block_list
     try:
         val_block_list = gdb.parse_and_eval('block_list')
