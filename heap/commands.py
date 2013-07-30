@@ -290,16 +290,26 @@ class Hexdump(gdb.Command):
 
     def invoke(self, args, from_tty):
         print repr(args)
-        if args.startswith('0x'):
-            addr = int(args, 16)
+        arg_list = gdb.string_to_argv(args)
+
+        chars_only = True
+
+        if len(arg_list) == 2:
+            addr_arg = arg_list[0]
+            chars_only = True if args[1] == '-c' else False
         else:
-            addr = int(args)
+            addr_arg = args
+
+        if addr_arg.startswith('0x'):
+            addr = int(addr_arg, 16)
+        else:
+            addr = int(addr_arg)
 
         # assume that paging will cut in and the user will quit at some point:
         size = 32
         while True:
-            hd = hexdump_as_bytes(addr, size)
-            print ('%s -> %s %s' % (fmt_addr(addr),  fmt_addr(addr + size -1), hd))
+            hd = hexdump_as_bytes(addr, size, chars_only=chars_only)
+            print ('%s -> %s %s' % (fmt_addr(addr), fmt_addr(addr + size -1), hd))
             addr += size
 
 class HeapArenas(gdb.Command):
