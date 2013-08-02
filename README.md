@@ -30,6 +30,22 @@ debugging symbols for the stock Python 2.7, as well as a python-dbg binary
 compiled with the --with-pydebug option that will only work with C extensions
 modules compiled with the /usr/include/python2.7_d headers.
 
+NOTE: The Python binary that accompanies Ubuntu 12.04 uses link-time
+optimization compilation.  As a result, many of the Python data structures are
+optimized out and prevent gdb-heap from being able to properly categorize the
+various data structures.  To take advantage of this capability, you will need to
+download the Python source and recompile without using the -flto option in
+the CFLAGS/LDFLAGS configuration option.  Normally this capability is not used in
+standard configure so simply compiling it should do the trick.  (If you want
+to have SSL support in this binary, make sure to edit Modules/Setup.dist).
+
+The python-dbg binary is compiled with the Py_TRACE_REFS conditional via the
+--pydebug which modifies the internal Python data structures and adds two
+pointers into every base PyObject, preventing previously compiled C extensions
+to be used.  Using your own compiled version of Python is therefore the way to
+go without if you want to take advantage of the categorize features of
+gdb-heap and/or inspecting the internal memory structures of Python.
+
 2. Create a file that will help automate the loading of the gdbheap library:
 
 gdb-heap-commands:
