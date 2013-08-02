@@ -43,8 +43,8 @@ The python-dbg binary is compiled with the Py_TRACE_REFS conditional via the
 --pydebug which modifies the internal Python data structures and adds two
 pointers into every base PyObject, preventing previously compiled C extensions
 to be used.  Using your own compiled version of Python is therefore the way to
-go without if you want to take advantage of the categorize features of
-gdb-heap and/or inspecting the internal memory structures of Python.
+go if you want to take advantage of the categorize features of gdb-heap and/or
+inspecting the internal memory structures of Python.
 
 2. Create a file that will help automate the loading of the gdbheap library:
 
