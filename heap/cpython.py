@@ -246,6 +246,7 @@ class PyObjectPtr(WrappedPointer):
     def categorize(self):
         # Python objects will be categorized as ("python", tp_name), but
         # old-style classes have to do more work
+        import pdb; pdb.set_trace()
         return Category('python', self.safe_tp_name())
 
     def as_malloc_addr(self):
@@ -355,7 +356,7 @@ class HeapTypeObjectPtr(PyObjectPtr):
             # and mark the dict's PyDictEntry with our typename:
             attr_dict.categorize_refs(usage_set, level=level+1,
                                       detail='%s.__dict__' % self.safe_tp_name())
-        return True
+            return True
 
     def get_attr_dict(self):
         '''
@@ -454,11 +455,15 @@ def as_python_object(addr):
         _type_PyGC_Head_ptr = _type_PyGC_Head.pointer()
         gc_ptr = gdb.Value(addr).cast(_type_PyGC_Head_ptr)
         # print gc_ptr.dereference()
-        if gc_ptr['gc']['gc_refs'] == -3: #FIXME: need to cover other values
+
+        PYGC_REFS_REACHABLE = -3
+
+        if gc_ptr['gc']['gc_refs'] == PYGC_REFS_REACHABLE:  # FIXME: need to cover other values
             pyop = is_pyobject_ptr(gdb.Value(addr + _type_PyGC_Head.sizeof))
             if pyop:
                 return pyop
     # Doesn't look like a python object, implicit return None
+
 
 class ArenaObject(WrappedPointer):
     '''
@@ -499,6 +504,7 @@ class ArenaObject(WrappedPointer):
         # This is the high-water mark: at this point and beyond, the bytes of
         # memory are untouched since malloc:
         self.pool_address = self.field('pool_address')
+
 
 class ArenaDetection(object):
     '''Detection of CPython arenas, done as an object so that we can cache state'''
@@ -582,6 +588,7 @@ def python_categorization(usage_set):
 
 from heap.commands import need_debuginfo
 
+
 class HeapCPythonAllocators(gdb.Command):
     "For CPython: display information on the allocators"
     def __init__(self):
@@ -601,6 +608,7 @@ class HeapCPythonAllocators(gdb.Command):
         print 'Objects/obmalloc.c: %i arenas' % len(t.rows)
         t.write(sys.stdout)
         print
+
 
 def register_commands():
     HeapCPythonAllocators()
