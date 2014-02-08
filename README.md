@@ -8,11 +8,7 @@ Installation instructions
 1. To get this module working with Ubuntu 12.04, make sure you have the following packages installed:
 
 ```
-sudo apt-get install libc6-dev
-sudo apt-get install libc6-dbg
-sudo apt-get install python-gi
-sudo apt-get install libglib2.0-dev
-sudo apt-get install python-ply
+sudo apt-get install libc6-dev libc6-dbg python-gi libglib2.0-dev python-ply
 ```
 
 The original forked version assumes an "import gdb" module, which resides in
