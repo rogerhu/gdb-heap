@@ -91,7 +91,7 @@ heap log - print a log of recorded heap states
 heap label - record the current state of the heap for later comparison
 heap diff - compare two states of the heap
 heap select - query used heap chunks
-hexdump <addr> - print a hexdump, stating at the specific region of memory
+hexdump <addr> [-c] - print a hexdump, stating at the specific region of memory (expose hex characters with -c option)
 heap arenas - print glibs arenas
 heap arena <arena> - select glibc arena number
 ```
