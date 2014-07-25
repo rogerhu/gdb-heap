@@ -30,7 +30,7 @@ def get_class_name(addr, size):
     if not looks_like_ptr(vtable):
         return None
 
-    info = execute('info sym (void *)0x%x' % long(vtable))
+    info = execute('info sym (void *)0x%x' % long(str(vtable.address), 0))
     # "vtable for Foo + 8 in section .rodata of /home/david/heap/test_cplusplus"
     m = re.match('vtable for (.*) \+ (.*)', info)
     if m:
