@@ -25,7 +25,7 @@ def categorize_sqlite3(addr, usage_set, visited):
     # print obj_ptr.dereference()
 
     aDb = obj_ptr['aDb']
-    Db_addr = long(aDb)
+    Db_addr = int(aDb)
     Db_malloc_addr = Db_addr - 8
     if usage_set.set_addr_category(Db_malloc_addr, Category('sqlite3', 'struct Db', None), visited):
         print(aDb['pBt'].dereference())

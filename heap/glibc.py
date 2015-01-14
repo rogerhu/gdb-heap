@@ -68,7 +68,7 @@ class MChunkPtr(WrappedPointer):
 
     def size(self):
         if not(hasattr(self, '_cached_size')):
-            self._cached_size = long(self.field('size'))
+            self._cached_size = int(self.field('size'))
         return self._cached_size
 
     def chunksize(self):
@@ -238,7 +238,7 @@ class MallocState(WrappedValue):
         # sbrk_base is NULL when no small allocations have happened:
         if chunk.as_address() > 0:
             # Iterate upwards until you reach "top":
-            top = long(self.field('top'))
+            top = int(self.field('top'))
             while chunk.as_address() != top:
                 yield chunk
                 # print '0x%x' % chunk.as_address(), chunk
@@ -258,7 +258,7 @@ class MallocState(WrappedValue):
 
         NFASTBINS = self.NFASTBINS()
         # Traverse fastbins:
-        for i in xrange(0, NFASTBINS):
+        for i in range(0, int(NFASTBINS)):
             print('fastbin %i' % i)
             p = self.fastbin(i)
             while not p.is_null():
@@ -276,7 +276,7 @@ class MallocState(WrappedValue):
         NBINS = 128
 
         # Traverse regular bins:
-        for i in xrange(1, NBINS):
+        for i in range(1, NBINS):
             print('regular bin %i' % i)
             b = self.bin_at(i)
             #print 'b: %s' % b
@@ -311,7 +311,7 @@ class MallocPar(WrappedValue):
 def sbrk_base():
     mp_ = MallocPar.get()
     try:
-        return long(mp_.field('sbrk_base'))
+        return int(mp_.field('sbrk_base'))
     except RuntimeError as e:
         check_missing_debuginfo(e, 'glibc')
         raise e

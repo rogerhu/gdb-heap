@@ -72,7 +72,7 @@ class PyArenaPtr(WrappedPointer):
         this arena'''
         # print 'num_pools:', num_pools
         pool_addr = self.initial_pool_addr
-        for idx in xrange(self.num_pools):
+        for idx in range(self.num_pools):
 
             # "pool_address" is a high-water-mark for activity within the arena;
             # pools at this location or beyond haven't been initialized yet:
@@ -170,9 +170,9 @@ class PyPoolPtr(WrappedPointer):
         freeblock = self.field('freeblock')
         _type_block_ptr_ptr = caching_lookup_type('unsigned char').pointer().pointer()
         # Walk the singly-linked list of free blocks for this chunk
-        while long(freeblock) != 0:
-            # print 'freeblock:', (fmt_addr(long(freeblock)), long(size))
-            yield (long(freeblock), long(size))
+        while int(freeblock) != 0:
+            # print 'freeblock:', (fmt_addr(int(freeblock)), int(size))
+            yield (int(freeblock), int(size))
             freeblock = freeblock.cast(_type_block_ptr_ptr).dereference()
 
     def _free_blocks(self):
@@ -195,8 +195,8 @@ class PyPoolPtr(WrappedPointer):
         while offset < nextoffset:
             addr = base_addr + offset
             # Filter out those within this pool's linked list of free blocks:
-            if long(addr) not in free_block_addresses:
-                yield (long(addr), long(size))
+            if int(addr) not in free_block_addresses:
+                yield (int(addr), int(size))
             offset += size
 
 
@@ -251,7 +251,7 @@ class PyObjectPtr(WrappedPointer):
     def as_malloc_addr(self):
         ob_type = addr['ob_type']
         tp_flags = ob_type['tp_flags']
-        addr = long(self._gdbval)
+        addr = int(self._gdbval)
         if tp_flags & Py_TPFLAGS_: # FIXME
             return obj_addr_to_gc_addr(addr)
         else:
@@ -277,7 +277,7 @@ class PyUnicodeObjectPtr(PyObjectPtr):
     _typename = 'PyUnicodeObject'
 
     def categorize_refs(self, usage_set, level=0, detail=None):
-        m_str = long(self.field('str'))
+        m_str = int(self.field('str'))
         usage_set.set_addr_category(m_str,
                                     Category('cpython', 'PyUnicodeObject buffer', detail),
                                     level)
@@ -291,7 +291,7 @@ class PyDictObjectPtr(PyObjectPtr):
     _typename = 'PyDictObject'
 
     def categorize_refs(self, usage_set, level=0, detail=None):
-        ma_table = long(self.field('ma_table'))
+        ma_table = int(self.field('ma_table'))
         usage_set.set_addr_category(ma_table,
                                     Category('cpython', 'PyDictEntry table', detail),
                                     level)
@@ -329,7 +329,7 @@ class PyInstanceObjectPtr(PyObjectPtr):
         _type_PyDictObject_ptr = caching_lookup_type('PyDictObject').pointer()
         in_dict = in_dict.cast(_type_PyDictObject_ptr)
 
-        ma_table = long(in_dict['ma_table'])
+        ma_table = int(in_dict['ma_table'])
 
         # Record details:
         usage_set.set_addr_category(ma_table,
@@ -347,7 +347,7 @@ class HeapTypeObjectPtr(PyObjectPtr):
         attr_dict = self.get_attr_dict()
         if attr_dict:
             # Mark the dictionary's "detail" with our typename
-            # gdb.execute('print (PyObject*)0x%x' % long(attr_dict._gdbval))
+            # gdb.execute('print (PyObject*)0x%x' % int(attr_dict._gdbval))
             usage_set.set_addr_category(obj_addr_to_gc_addr(attr_dict._gdbval),
                                         Category('python', 'dict', '%s.__dict__' % self.safe_tp_name()),
                                         level=level+1)
@@ -426,9 +426,9 @@ def is_pyobject_ptr(addr):
 def obj_addr_to_gc_addr(addr):
     '''Given a PyObject* address, convert to a PyGC_Head* address
     (i.e. the allocator's view of the same)'''
-    #print 'obj_addr_to_gc_addr(%s)' % fmt_addr(long(addr))
+    #print 'obj_addr_to_gc_addr(%s)' % fmt_addr(int(addr))
     _type_PyGC_Head = caching_lookup_type('PyGC_Head')
-    return long(addr) - _type_PyGC_Head.sizeof
+    return int(addr) - _type_PyGC_Head.sizeof
 
 def as_python_object(addr):
     '''Given an address of an allocation, determine if it holds a PyObject,
@@ -480,7 +480,7 @@ class ArenaObject(WrappedPointer):
             raise WrongInferiorProcess('cpython')
 
         try:
-            for i in xrange(val_maxarenas):
+            for i in range(val_maxarenas):
                 # Look up "&arenas[i]":
                 obj = ArenaObject(val_arenas[i].address)
 
@@ -535,7 +535,7 @@ def python_categorization(usage_set):
     try:
         val_interned = gdb.parse_and_eval('interned')
         pyop = PyDictObjectPtr.from_pyobject_ptr(val_interned)
-        ma_table = long(pyop.field('ma_table'))
+        ma_table = int(pyop.field('ma_table'))
         usage_set.set_addr_category(ma_table,
                                     Category('cpython', 'PyDictEntry table', 'interned'),
                                     level=1)
@@ -550,8 +550,8 @@ def python_categorization(usage_set):
         val_block_list = gdb.parse_and_eval('block_list')
         if str(val_block_list.type.target()) != 'PyIntBlock':
             raise RuntimeError
-        while long(val_block_list) != 0:
-            usage_set.set_addr_category(long(val_block_list),
+        while int(val_block_list) != 0:
+            usage_set.set_addr_category(int(val_block_list),
                                         Category('cpython', '_intblock', ''),
                                         level=0)
             val_block_list = val_block_list['next']

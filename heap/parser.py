@@ -53,9 +53,9 @@ def t_LITERAL_NUMBER(t):
     r'(0x[0-9a-fA-F]+|\d+)'
     try:
         if t.value.startswith('0x'):
-            t.value = long(t.value, 16)
+            t.value = int(t.value, 16)
         else:
-            t.value = long(t.value)
+            t.value = int(t.value)
     except ValueError:
         raise ParserError(t.value)
     return t

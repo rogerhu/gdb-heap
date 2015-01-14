@@ -45,7 +45,7 @@ class ArenaDetection(object):
             print(ar._gdbval.dereference())
             self._arena_refs.append(ar)
             # ar_base : address as returned by malloc
-            self._malloc_ptrs[long(ar.field('ar_base'))] = ar
+            self._malloc_ptrs[int(ar.field('ar_base'))] = ar
         print(self._malloc_ptrs)
 
     def as_arena(self, ptr, chunksize):
