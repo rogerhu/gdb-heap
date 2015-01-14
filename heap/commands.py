@@ -32,10 +32,10 @@ def need_debuginfo(f):
     def g(self, args, from_tty):
         try:
             return f(self, args, from_tty)
-        except MissingDebuginfo, e:
-            print 'Missing debuginfo for %s' % e.module
-            print 'Suggested fix:'
-            print '    debuginfo-install %s' % e.module
+        except MissingDebuginfo as e:
+            print('Missing debuginfo for %s' % e.module)
+            print('Suggested fix:')
+            print('    debuginfo-install %s' % e.module)
     return g
 
 class Heap(gdb.Command):
@@ -87,7 +87,7 @@ class Heap(gdb.Command):
                        ])
         t.add_row(['', '', 'TOTAL', fmt_size(total_count), fmt_size(total_size)])
         t.write(sys.stdout)
-        print
+        print()
 
 class HeapSizes(gdb.Command):
     'Print a report on memory usage, by sizes'
@@ -122,7 +122,7 @@ class HeapSizes(gdb.Command):
                        fmt_size(chunks_by_size[size] * size)])
         t.add_row(['TOTALS', num_chunks, fmt_size(total_size)])
         t.write(sys.stdout)
-        print
+        print()
 
 
 class HeapUsed(gdb.Command):
@@ -134,8 +134,8 @@ class HeapUsed(gdb.Command):
 
     @need_debuginfo
     def invoke(self, args, from_tty):
-        print 'Used chunks of memory on heap'
-        print '-----------------------------'
+        print('Used chunks of memory on heap')
+        print('-----------------------------')
         ms = glibc_arenas.get_ms()
         for i, chunk in enumerate(ms.iter_chunks()):
             if not chunk.is_inuse():
@@ -150,7 +150,7 @@ class HeapUsed(gdb.Command):
                       fmt_addr(chunk.as_mem()),
                       fmt_addr(chunk.as_mem()+size-1),
                       size, category, hd))
-        print
+        print()
 
 class HeapFree(gdb.Command):
     'Print free heap chunks'
@@ -161,8 +161,8 @@ class HeapFree(gdb.Command):
 
     @need_debuginfo
     def invoke(self, args, from_tty):
-        print 'Free chunks of memory on heap'
-        print '-----------------------------'
+        print('Free chunks of memory on heap')
+        print('-----------------------------')
         ms = glibc_arenas.get_ms()
         total_size = 0
         for i, chunk in enumerate(ms.iter_free_chunks()):
@@ -178,7 +178,7 @@ class HeapFree(gdb.Command):
                       fmt_addr(chunk.as_mem()),
                       fmt_addr(chunk.as_mem()+size-1),
                       size, category, hd))
-        print "Total size: %s" % total_size
+        print("Total size: %s" % total_size)
 
 
 class HeapAll(gdb.Command):
@@ -190,8 +190,8 @@ class HeapAll(gdb.Command):
 
     @need_debuginfo
     def invoke(self, args, from_tty):
-        print 'All chunks of memory on heap (both used and free)'
-        print '-------------------------------------------------'
+        print('All chunks of memory on heap (both used and free)')
+        print('-------------------------------------------------')
         ms = glibc_arenas.get_ms()
         for i, chunk in enumerate(ms.iter_chunks()):
             size = chunk.chunksize()
@@ -205,7 +205,7 @@ class HeapAll(gdb.Command):
                       fmt_addr(chunk.as_address()),
                       fmt_addr(chunk.as_address()+size-1),
                       kind, size, chunk))
-        print
+        print()
 
 class HeapLog(gdb.Command):
     'Print a log of recorded heap states'
@@ -218,18 +218,18 @@ class HeapLog(gdb.Command):
     def invoke(self, args, from_tty):
         h = history
         if len(h.snapshots) == 0:
-            print '(no history)'
+            print('(no history)')
             return
         for i in xrange(len(h.snapshots), 0, -1):
             s = h.snapshots[i-1]
-            print 'Label %i "%s" at %s' % (i, s.name, s.time)
-            print '    ', s.summary()
+            print('Label %i "%s" at %s' % (i, s.name, s.time))
+            print('    ', s.summary())
             if i > 1:
                 prev = h.snapshots[i-2]
                 d = Diff(prev, s)
-                print
-                print '    ', d.stats()
-            print
+                print()
+                print('    ', d.stats())
+            print()
 
 class HeapLabel(gdb.Command):
     'Record the current state of the heap for later comparison'
@@ -241,7 +241,7 @@ class HeapLabel(gdb.Command):
     @need_debuginfo
     def invoke(self, args, from_tty):
         s = history.add(args)
-        print s.summary()
+        print(s.summary())
 
 
 class HeapDiff(gdb.Command):
@@ -255,15 +255,15 @@ class HeapDiff(gdb.Command):
     def invoke(self, args, from_tty):
         h = history
         if len(h.snapshots) == 0:
-            print '(no history)'
+            print('(no history)')
             return
         prev = h.snapshots[-1]
         curr = Snapshot.current('current')
         d = Diff(prev, curr)
-        print 'Changes from %s to %s' % (prev.name, curr.name)
-        print '  ', d.stats()
-        print
-        print '\n'.join(['  ' + line for line in d.as_changes().splitlines()])
+        print('Changes from %s to %s' % (prev.name, curr.name))
+        print('  ', d.stats())
+        print()
+        print('\n'.join(['  ' + line for line in d.as_changes().splitlines()]))
 
 class HeapSelect(gdb.Command):
     'Query used heap chunks'
@@ -278,8 +278,8 @@ class HeapSelect(gdb.Command):
         from heap.parser import ParserError
         try:
             do_query(args)
-        except ParserError, e:
-            print e
+        except ParserError as e:
+            print(e)
 
 class Hexdump(gdb.Command):
     'Print a hexdump, starting at the specific region of memory'
@@ -289,7 +289,7 @@ class Hexdump(gdb.Command):
                               gdb.COMMAND_DATA)
 
     def invoke(self, args, from_tty):
-        print repr(args)
+        print(repr(args))
         arg_list = gdb.string_to_argv(args)
 
         chars_only = True
@@ -322,7 +322,7 @@ class HeapArenas(gdb.Command):
     @need_debuginfo
     def invoke(self, args, from_tty):
         for n, arena in enumerate(glibc_arenas.arenas):
-            print "Arena #%d: %s" % (n, arena.address)
+            print("Arena #%d: %s" % (n, arena.address))
 
 class HeapArenaSelect(gdb.Command):
     'Select heap arena'
@@ -336,7 +336,7 @@ class HeapArenaSelect(gdb.Command):
         arena_num = int(args)
 
         glibc_arenas.cur_arena = glibc_arenas.arenas[arena_num]
-        print "Arena set to %s" % glibc_arenas.cur_arena.address
+        print("Arena set to %s" % glibc_arenas.cur_arena.address)
 
 
 
@@ -357,4 +357,3 @@ def register_commands():
 
     from heap.cpython import register_commands as register_cpython_commands
     register_cpython_commands()
-

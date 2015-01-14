@@ -200,17 +200,17 @@ class PyPoolPtr(WrappedPointer):
             offset += size
 
 
-Py_TPFLAGS_HEAPTYPE = (1L << 9)
+Py_TPFLAGS_HEAPTYPE = (1 << 9)
 
-Py_TPFLAGS_INT_SUBCLASS      = (1L << 23)
-Py_TPFLAGS_LONG_SUBCLASS     = (1L << 24)
-Py_TPFLAGS_LIST_SUBCLASS     = (1L << 25)
-Py_TPFLAGS_TUPLE_SUBCLASS    = (1L << 26)
-Py_TPFLAGS_STRING_SUBCLASS   = (1L << 27)
-Py_TPFLAGS_UNICODE_SUBCLASS  = (1L << 28)
-Py_TPFLAGS_DICT_SUBCLASS     = (1L << 29)
-Py_TPFLAGS_BASE_EXC_SUBCLASS = (1L << 30)
-Py_TPFLAGS_TYPE_SUBCLASS     = (1L << 31)
+Py_TPFLAGS_INT_SUBCLASS      = (1 << 23)
+Py_TPFLAGS_LONG_SUBCLASS     = (1 << 24)
+Py_TPFLAGS_LIST_SUBCLASS     = (1 << 25)
+Py_TPFLAGS_TUPLE_SUBCLASS    = (1 << 26)
+Py_TPFLAGS_STRING_SUBCLASS   = (1 << 27)
+Py_TPFLAGS_UNICODE_SUBCLASS  = (1 << 28)
+Py_TPFLAGS_DICT_SUBCLASS     = (1 << 29)
+Py_TPFLAGS_BASE_EXC_SUBCLASS = (1 << 30)
+Py_TPFLAGS_TYPE_SUBCLASS     = (1 << 31)
 
 class PyObjectPtr(WrappedPointer):
     @classmethod
@@ -239,7 +239,7 @@ class PyObjectPtr(WrappedPointer):
     def safe_tp_name(self):
         try:
             return self.type().field('tp_name').string()
-        except RuntimeError, UnicodeDecodeError:
+        except(RuntimeError, UnicodeDecodeError):
             # Can't even read the object at all?
             return 'unknown'
 
@@ -604,7 +604,7 @@ class HeapCPythonAllocators(gdb.Command):
                        '%i / %i ' % (arena.field('nfreepools'),
                                      arena.field('ntotalpools'))
                        ])
-        print 'Objects/obmalloc.c: %i arenas' % len(t.rows)
+        print('Objects/obmalloc.c: %i arenas' % len(t.rows))
         t.write(sys.stdout)
         print
 
