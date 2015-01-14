@@ -60,9 +60,9 @@ def caching_lookup_type(typename):
         raise RuntimeError('(cached) Could not find type "%s"' % typename)
     try:
         if 0:
-            print 'type cache miss: %r' % typename
+            print('type cache miss: %r' % typename)
         gdbtype = gdb.lookup_type(typename).strip_typedefs()
-    except RuntimeError, e:
+    except RuntimeError as e:
         # did not find the type: add a None to the cache
         gdbtype = None
     __type_cache[typename] = gdbtype
@@ -351,13 +351,13 @@ class UsageSet(object):
         if visited:
             if addr in visited:
                 if debug:
-                    print 'addr 0x%x already visited (for category %r)' % (addr, category)
+                    print('addr 0x%x already visited (for category %r)' % (addr, category))
                 return False
             visited.add(addr)
 
         if addr in self.usage_by_address:
             if debug:
-                print 'addr 0x%x found (for category %r, level=%i)' % (addr, category, level)
+                print('addr 0x%x found (for category %r, level=%i)' % (addr, category, level))
             u = self.usage_by_address[addr]
             # Bail if we already have a more detailed categorization for the
             # address:
@@ -371,7 +371,7 @@ class UsageSet(object):
             return True
         else:
             if debug:
-                print 'addr 0x%x not found (for category %r)' % (addr, category)
+                print('addr 0x%x not found (for category %r)' % (addr, category))
 
 class PythonCategorizer(object):
     '''
@@ -462,7 +462,7 @@ class PythonCategorizer(object):
             ptr_type = caching_lookup_type('struct rpmmiObject_s').pointer()
             if ptr_type:
                 obj_ptr = gdb.Value(u.start).cast(ptr_type)
-                print obj_ptr.dereference()
+                print(obj_ptr.dereference())
                 mi = obj_ptr['mi']
                 if usage_set.set_addr_category(long(mi),
                                                Category('rpm', 'rpmdbMatchIterator', None)):
@@ -551,7 +551,7 @@ def categorize(u, usage_set):
         except (RuntimeError, UnicodeEncodeError, UnicodeDecodeError):
             # If something went wrong, assume that this wasn't really a python
             # object, and fall through:
-            print "couldn't categorize pyop:", pyop
+            print("couldn't categorize pyop:", pyop)
             pass
 
     # PyPy detection:
@@ -608,7 +608,7 @@ class ProgressNotifier(object):
     def next(self):
         self.count += 1
         if 0 == self.count % 10000:
-            print self.msg, self.count
+            print(self.msg, self.count)
         return self.inner.next()
 
 def iter_usage_with_progress():
@@ -702,6 +702,3 @@ def looks_like_ptr(value):
 
     # Assume that if it got this far, that it's valid:
     return True
-
-
-

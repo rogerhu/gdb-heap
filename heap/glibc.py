@@ -253,13 +253,13 @@ class MallocState(WrappedValue):
         '''Yield a sequence of MChunkPtr (some of which may be MFastBinPtr),
         corresponding to the free chunks of memory'''
         # Account for top:
-        print 'top'
+        print('top')
         yield MChunkPtr(self.field('top'))
 
         NFASTBINS = self.NFASTBINS()
         # Traverse fastbins:
         for i in xrange(0, NFASTBINS):
-            print 'fastbin %i' % i
+            print('fastbin %i' % i)
             p = self.fastbin(i)
             while not p.is_null():
                 yield p
@@ -277,7 +277,7 @@ class MallocState(WrappedValue):
 
         # Traverse regular bins:
         for i in xrange(1, NBINS):
-            print 'regular bin %i' % i
+            print('regular bin %i' % i)
             b = self.bin_at(i)
             #print 'b: %s' % b
             p = b.last()
@@ -312,7 +312,7 @@ def sbrk_base():
     mp_ = MallocPar.get()
     try:
         return long(mp_.field('sbrk_base'))
-    except RuntimeError, e:
+    except RuntimeError as e:
         check_missing_debuginfo(e, 'glibc')
         raise e
 
@@ -408,7 +408,7 @@ def iter_mmap_heap_chunks(pid):
                                 start, end = [int(m.group(i), 16) for i in (1, 2)]
                                 yield (start, end)
         else:
-            print 'unmatched :', line
+            print('unmatched :', line)
 
 class GlibcArenas(object):
     def __init__(self):
