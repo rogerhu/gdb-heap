@@ -30,15 +30,15 @@ def get_class_name(addr, size):
     if not looks_like_ptr(vtable):
         return None
 
-    info = execute('info sym (void *)0x%x' % long(vtable))
+    info = execute('info sym (void *)0x%x' % int(vtable))
     # "vtable for Foo + 8 in section .rodata of /home/david/heap/test_cplusplus"
     m = re.match('vtable for (.*) \+ (.*)', info)
     if m:
         return m.group(1)
     # Not matched:
     return None
-    
+
 
 def as_cplusplus_object(addr, size):
-    print get_class_name(addr)
+    print(get_class_name(addr))
     pass

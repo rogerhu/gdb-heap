@@ -165,6 +165,7 @@ class HeapFree(gdb.Command):
         print('-----------------------------')
         ms = glibc_arenas.get_ms()
         total_size = 0
+
         for i, chunk in enumerate(ms.iter_free_chunks()):
             size = chunk.chunksize()
             total_size += size
@@ -178,6 +179,7 @@ class HeapFree(gdb.Command):
                       fmt_addr(chunk.as_mem()),
                       fmt_addr(chunk.as_mem()+size-1),
                       size, category, hd))
+
         print("Total size: %s" % total_size)
 
 
@@ -220,7 +222,7 @@ class HeapLog(gdb.Command):
         if len(h.snapshots) == 0:
             print('(no history)')
             return
-        for i in xrange(len(h.snapshots), 0, -1):
+        for i in range(len(h.snapshots), 0, -1):
             s = h.snapshots[i-1]
             print('Label %i "%s" at %s' % (i, s.name, s.time))
             print('    ', s.summary())

@@ -42,7 +42,7 @@ def get_typenode_for_gtype(gtype):
         # (ii) it converts a TypeNode* to a TypeNode**
         return val[typenode >> 2]
 
-    gtype = long(gtype)
+    gtype = int(gtype)
     typenode = gtype - gtype % 4
     if typenode > (255 << 2):
         return gdb.Value(typenode).cast (gdb.lookup_type("TypeNode").pointer())
@@ -88,7 +88,7 @@ class GTypeInstancePtr(WrappedPointer):
                 #print typename, addr.dereference()
                 #if typename == 'GdkPixbuf':
                 #    print 'GOT PIXELS', addr['pixels']
-        except RuntimeError, e:
+        except RuntimeError as e:
             pass
             #print addr, e
 
@@ -139,7 +139,7 @@ class GdkImagePtr(GTypeInstancePtr):
                                     Category('X11', 'Image', dims),
                                     level=level+2, debug=True)
 
-        usage_set.set_addr_category(long(ximage.field('data')),
+        usage_set.set_addr_category(int(ximage.field('data')),
                                     Category('X11', 'Image data', dims),
                                     level=level+2, debug=True)
 
@@ -147,7 +147,7 @@ class GdkPixbufPtr(GTypeInstancePtr):
     def categorize_refs(self, usage_set, level=0, detail=None):
         dims = '%sw x %sh' % (self._gdbval['width'],
                               self._gdbval['height'])
-        usage_set.set_addr_category(long(self._gdbval['pixels']),
+        usage_set.set_addr_category(int(self._gdbval['pixels']),
                                     Category('GType', 'GdkPixbuf pixels', dims),
                                     level=level+1, debug=True)
 
@@ -164,7 +164,7 @@ class PangoCairoFcFontMapPtr(GTypeInstancePtr):
                                     Category('FreeType', 'Library', ''),
                                     level=level+1, debug=True)
 
-        usage_set.set_addr_category(long(FT_Library.field('raster_pool')),
+        usage_set.set_addr_category(int(FT_Library.field('raster_pool')),
                                     Category('FreeType', 'raster_pool', ''),
                                     level=level+2, debug=True)
         # potentially we could look at FT_Library['memory']
