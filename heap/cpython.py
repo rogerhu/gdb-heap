@@ -606,7 +606,7 @@ class HeapCPythonAllocators(gdb.Command):
                        ])
         print('Objects/obmalloc.c: %i arenas' % len(t.rows))
         t.write(sys.stdout)
-        print
+        print()
 
 
 def register_commands():

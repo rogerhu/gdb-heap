@@ -605,11 +605,13 @@ class ProgressNotifier(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         self.count += 1
         if 0 == self.count % 10000:
             print(self.msg, self.count)
-        return self.inner.next()
+        return self.inner.__next__()
+
+
 
 def iter_usage_with_progress():
     return ProgressNotifier(iter_usage(), 'Blocks retrieved')

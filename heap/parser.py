@@ -32,7 +32,7 @@ tokens = [
     'LPAREN','RPAREN',
     'COMPARISON'
     ] + reserved
-        
+
 t_LPAREN  = r'\('
 t_RPAREN  = r'\)'
 
@@ -72,9 +72,9 @@ t_ignore = " \t"
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += t.value.count("\n")
-    
+
 def t_error(t):
-    print "Illegal character '%s'" % t.value[0]
+    print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
 lexer = lex.lex()
@@ -142,7 +142,7 @@ def p_expression_name(t):
                                           ('Unknown attribute "%s" (supported are %s)'
                                            % (attrname, ','.join(attrnames))))
     t[0] = GetAttr(attrname)
- 
+
 class ParserError(Exception):
     @classmethod
     def from_production(cls, p, val, msg):
@@ -163,7 +163,7 @@ class ParserError(Exception):
         self.pos = pos
         self.value = value
         self.msg = msg
-    
+
     def __str__(self):
         return ('%s at "%s":\n%s\n%s'
                 % (self.msg, self.value,
@@ -191,7 +191,4 @@ def test_lexer(s):
     while True:
         tok = lexer.token()
         if not tok: break
-        print tok
-
-
-
+        print(tok)

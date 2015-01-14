@@ -37,8 +37,8 @@ def get_class_name(addr, size):
         return m.group(1)
     # Not matched:
     return None
-    
+
 
 def as_cplusplus_object(addr, size):
-    print get_class_name(addr)
+    print(get_class_name(addr))
     pass

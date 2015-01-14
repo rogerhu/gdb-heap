@@ -88,7 +88,7 @@ class GTypeInstancePtr(WrappedPointer):
                 #print typename, addr.dereference()
                 #if typename == 'GdkPixbuf':
                 #    print 'GOT PIXELS', addr['pixels']
-        except RuntimeError, e:
+        except RuntimeError as e:
             pass
             #print addr, e
 
