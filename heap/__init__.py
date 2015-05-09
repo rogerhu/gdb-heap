@@ -533,7 +533,7 @@ def categorize_usage_list(usage_list):
             if pycategorizer.categorize(u, usage_set):
                 continue
 
-    from cpython import python_categorization
+    from heap.cpython import python_categorization
     python_categorization(usage_set)
 
 

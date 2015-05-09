@@ -73,9 +73,8 @@ class Heap(gdb.Command):
 
         t = Table(['Domain', 'Kind', 'Detail', 'Count', 'Allocated size'])
         for category in sorted(total_by_category.keys(),
-                               lambda s1, s2: cmp(total_by_category[s2],
-                                                  total_by_category[s1])
-                               ):
+                               key=total_by_category.get,
+                               reverse=True):
             detail = category.detail
             if not detail:
                 detail = ''
