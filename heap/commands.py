@@ -282,6 +282,77 @@ class HeapSelect(gdb.Command):
         except ParserError as e:
             print(e)
 
+class HeapRange(gdb.Command):
+    '''Print all non-empty merged memory ranges sorted by start address
+
+    Each line contains a start and end address; the end address is the
+    first not valid address.
+    '''
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap range",
+                              gdb.COMMAND_DATA,
+                              prefix = True)
+
+    def invoke(self, args, from_tty):
+        import ranges
+        for r in ranges.merged_ranges():
+            print('\t%s' % r)
+
+class HeapRangeRun(gdb.Command):
+    '''Run a command for each range from `heap range`
+
+    Use $range_start, $range_last (end - 1) and $range_end variables in the
+    command.
+    Example: heap range run find /g $range_start, $range_last, some_value
+    '''
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap range run",
+                              gdb.COMMAND_DATA,
+                              gdb.COMPLETE_COMMAND)
+
+    def invoke(self, args, from_tty):
+        import ranges
+        for r in ranges.merged_ranges():
+            gdb.execute("set $range_start=%s" % fmt_addr(r.start))
+            gdb.execute("set $range_last=%s" % fmt_addr(r.last))
+            gdb.execute("set $range_end=%s" % fmt_addr(r.end))
+            gdb.execute(args, from_tty = True)
+
+class HeapFind(gdb.Command):
+    '''Find stuff anywhere; supplies ranges to the find command
+
+    Example: heap find /g some_callback_function
+    '''
+    def __init__(self):
+        gdb.Command.__init__ (self,
+                              "heap find",
+                              gdb.COMMAND_DATA)
+
+    def invoke(self, args, from_tty):
+        import ranges
+        import re
+        from heap.compat import execute
+        FIND_SWITCHES = re.compile('^((?:\s*/\w+)*)(.*)$')
+        (switches, args) = FIND_SWITCHES.match(args).groups()
+        while len(args) > 0 and args[0][0] == '/':
+            switches.append(args.pop(0))
+        sumfound = 0
+        for r in ranges.merged_ranges():
+            result = execute('find%s %s, %s, %s' % (switches, fmt_addr(r.start), fmt_addr(r.last), args))
+            numfound = int(gdb.parse_and_eval('$numfound'))
+            sumfound += numfound
+            if numfound > 0:
+                result = result.splitlines()
+                result.pop() # no summary
+                for l in result:
+                    print(l)
+        if sumfound > 0:
+            print ('%s patterns found' % sumfound)
+        else:
+            print ('Pattern not found')
+
 class Hexdump(gdb.Command):
     'Print a hexdump, starting at the specific region of memory'
     def __init__(self):
@@ -354,6 +425,10 @@ def register_commands():
     HeapSelect()
     HeapArenas()
     HeapArenaSelect()
+    HeapRange()
+    HeapRangeRun()
+    HeapFind()
+
     Hexdump()
 
     from heap.cpython import register_commands as register_cpython_commands

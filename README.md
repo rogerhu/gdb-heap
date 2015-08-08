@@ -94,6 +94,9 @@ heap select - query used heap chunks
 hexdump <addr> [-c] - print a hexdump, stating at the specific region of memory (expose hex characters with -c option)
 heap arenas - print glibs arenas
 heap arena <arena> - select glibc arena number
+heap find -- Find stuff anywhere; supplies ranges to the find command
+heap range -- Print all non-empty merged memory ranges sorted by start address
+heap range run -- Run a command for each range from `heap range`
 ```
 
 Useful resources
