@@ -27,7 +27,7 @@ debugging symbols for the stock Python 2.7, as well as a python-dbg binary
 compiled with the --with-pydebug option that will only work with C extensions
 modules compiled with the /usr/include/python2.7_d headers.
 
-NOTE: The Python binary that accompanies Ubuntu 12.04 uses link-time
+NOTE: The Python binary that accompanies Ubuntu distributions uses link-time
 optimization compilation.  As a result, many of the Python data structures are
 optimized out and prevent gdb-heap from being able to properly categorize the
 various data structures.  To take advantage of this capability, you will need to
@@ -109,3 +109,5 @@ Useful resources
  * Malloc per-thread arenas in glibc (http://siddhesh.in/journal/2012/10/24/malloc-per-thread-arenas-in-glibc/)
 
  * Understanding the heap by breaking it (http://www.blackhat.com/presentations/bh-usa-07/Ferguson/Whitepaper/bh-usa-07-ferguson-WP.pdf)
+
+ * Building your own Python version for an easier debugging experience (http://hustoknow.blogspot.com/2014/06/how-to-troubleshoot-your-python.html)
