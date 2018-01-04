@@ -1,18 +1,19 @@
 gdb-heap
 ========
 
-Forked from https://fedorahosted.org/gdb-heap/
+Original fork derived from `https://fedorahosted.org/gdb-heap/`.  This repo is now considered the official repository for the gdb-heap library.
 
 Installation instructions
 -------------------------
-1. To get this module working with Ubuntu 12.04, make sure you have the following packages installed:
+1. To get this module working with Ubuntu 16.04, make sure you have the following packages installed:
 
 ```
-sudo apt-get install libc6-dev libc6-dbg python-gi libglib2.0-dev python-ply
+sudo apt-get install libc6-dev libc6-dbg python-gi libglib2.0-0-dbg python-ply
 ```
 
 The original forked version assumes an "import gdb" module, which resides in
-"/usr/share/glib-2.0/gdb" as part of the libglib2.0-dev package.
+"/usr/share/glib-2.0/gdb" as part of the `libglib2.0-0-dbg` package.  Earlier versions
+of Ubuntu have this library is located in the `ibglib2.0-dev` package.
 
 There is also a conflict with the python-gobject-2 library, which are deprecated
 Python bindings for the GObject library.  This package installs a glib/
