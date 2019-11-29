@@ -3,7 +3,7 @@
 # the working copy of gdb-heap
 # Typical usage:
 #   ./run-gdb-heap python
-PYTHONPATH=$(PWD) \
+PYTHONPATH="$(pwd)" \
   gdb \
   --eval-command="python import gdbheap" \
   --args $*
