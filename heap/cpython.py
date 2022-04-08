@@ -246,6 +246,7 @@ class PyObjectPtr(WrappedPointer):
     def categorize(self):
         # Python objects will be categorized as ("python", tp_name), but
         # old-style classes have to do more work
+        import pdb; pdb.set_trace()
         return Category('python', self.safe_tp_name())
 
     def as_malloc_addr(self):
@@ -355,7 +356,7 @@ class HeapTypeObjectPtr(PyObjectPtr):
             # and mark the dict's PyDictEntry with our typename:
             attr_dict.categorize_refs(usage_set, level=level+1,
                                       detail='%s.__dict__' % self.safe_tp_name())
-        return True
+            return True
 
     def get_attr_dict(self):
         '''
@@ -607,6 +608,7 @@ class HeapCPythonAllocators(gdb.Command):
         print('Objects/obmalloc.c: %i arenas' % len(t.rows))
         t.write(sys.stdout)
         print()
+
 
 
 def register_commands():
